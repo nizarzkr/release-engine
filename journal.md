@@ -194,7 +194,38 @@ Après **toute** future migration : relancer `generate_typescript_types` et remp
 
 ---
 
-## Prochaine étape : J6 — Infra IA (BYOK)
-- Table `api_key` (déjà en base). Chiffrement au repos avec `BYOK_ENCRYPTION_KEY` (déjà dans `.env.local`).
-- UI d'ajout/test de clé par provider (ANTHROPIC/OPENAI/GOOGLE).
-- Couche d'abstraction multi-provider (Vercel AI SDK) — sans encore générer (génération = J7).
+---
+
+## J6 — Infra IA BYOK ✅ CODE COMPLET (test navigateur côté user)
+**Date : 2026-07-08** · commit `f689802`
+
+### Décisions
+- **Enregistrement sans test réseau** (validation de format légère). Pas de bouton « Tester ».
+
+### Fait
+- Deps : `ai@7`, `@ai-sdk/{anthropic,openai,google}@4`, `server-only`.
+- **Migration 0004** : `api_key.key_hint` + `unique(user_id, provider)` (→ upsert onConflict). Types régénérés.
+- **`lib/crypto.ts`** (server-only) : AES-256-GCM (`iv||authTag||ciphertext` en base64). **4 tests OK** (round-trip, IV aléatoire, falsification rejetée par l'authTag).
+- **`lib/ai/config.ts`** (client-safe) : `AI_PROVIDERS` (labels, modèle défaut, préfixe clé, console URL), `validateKeyFormat`, `keyHint`.
+- **`lib/ai/providers.ts`** (server-only) : `getModel(provider, apiKey, modelId?)` → `LanguageModel` (Vercel AI SDK). Utilisé en J7.
+- **`lib/ai/keys.ts`** (server-only) : `getDecryptedKey` (J7), `listKeyStatuses` (UI — jamais `encrypted_key`).
+- **Settings** : `saveApiKey` (upsert chiffré + key_hint), `deleteApiKey` ; page `/settings` + `api-key-form.tsx` (1 carte/provider, champ password, statut ••••hint) ; lien nav « Réglages ».
+
+### Points sécurité
+- Clés **chiffrées au repos**, déchiffrées uniquement côté serveur au besoin. `encrypted_key` jamais renvoyé au client (UI ne lit que `provider`/`key_hint`/`updated_at`).
+- Modules secrets marqués `import "server-only"`.
+- Modèles Claude à utiliser en J7 : `claude-opus-4-8` (défaut), `claude-sonnet-5`, `claude-haiku-4-5`.
+
+### Vérifs passées
+- 4/4 tests crypto. `npm run build` OK (route `/settings`). Contrainte unique `(user_id, provider)` confirmée en DB.
+- Advisors : **0 alerte sur nos tables**. 1 WARN non lié = « Leaked Password Protection Disabled » (réglage Auth dashboard, HaveIBeenPwned — optionnel à activer par l'utilisateur).
+
+### À tester côté user (navigateur)
+- `/settings` : coller une clé (ex. Claude `sk-ant-…`) → « Configurée · ••••xxxx » ; re-coller remplace ; supprimer enlève. Vérifier en DB que `encrypted_key` ≠ la clé en clair.
+
+---
+
+## Prochaine étape : J7 — Content Engine (génération IA)
+- Schéma Zod `ContentPlanSchema` (§6.1 PRD) + `generateObject()` (Vercel AI SDK) via `getModel`.
+- System prompt : profil + release + thèmes + source blocks ; règles (posture image, distribution thèmes/fenêtre, capacité, temps forts, hooks scroll-stopping).
+- Bouton « Générer le plan » → ~20-25 content_items distribués sur la timeline (moteur J3), écrits en DB, affichés au board.
