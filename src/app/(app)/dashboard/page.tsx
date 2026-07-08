@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/auth";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,13 +20,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Bienvenue, {profile.artist_name}
-        </h1>
-        <p className="text-muted-foreground">
-          Ton QG de sorties. Les releases et le pipeline arrivent bientôt.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Bienvenue, {profile.artist_name}
+          </h1>
+          <p className="text-muted-foreground">
+            Ton QG de sorties. Le pipeline de contenu arrive bientôt.
+          </p>
+        </div>
+        <Link href="/releases/new" className={buttonVariants()}>
+          Créer une release
+        </Link>
       </div>
 
       <Card>

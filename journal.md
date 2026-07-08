@@ -87,7 +87,32 @@ Après **toute** future migration : relancer `generate_typescript_types` et remp
 
 ---
 
-## Prochaine étape : J2 — Auth (login email + Google OAuth) + Artist Profile
-- Auth Supabase avec `@supabase/ssr` ; refresh de session via **`proxy.ts`** (ex-middleware, cf. Next 16).
-- Routes protégées, page login, callback OAuth.
-- Création de la ligne `artist_profile` côté app (décision J1) + formulaire de profil (DA, posture image, capacité…).
+---
+
+## J2 — Auth (email+password) + Artist Profile ✅ CODE COMPLET (test flow complet côté user)
+**Date : 2026-07-08** · commit `2cc9aec`
+
+### Décisions
+- Auth **email + mot de passe** pour démarrer ; **Google OAuth plus tard** (nécessite config Google Cloud côté user).
+- Zod v4 installé (`z.email()`, `{ error }`).
+
+### Fait
+- **Session/proxy** (Next 16) : `src/proxy.ts` + `src/lib/supabase/proxy.ts` (`updateSession`, `getClaims()`, matcher). Redirige les non-connectés vers `/login`.
+- **Login** : `src/app/login/page.tsx` (Client, `useActionState`, bascule connexion/inscription) + `actions.ts` (`login`/`signup`). Routes `auth/callback` (exchangeCodeForSession) et `auth/signout`.
+- **Zone protégée** `src/app/(app)/` : `layout.tsx` (garde `getUserOrRedirect` + app shell nav + déconnexion), `lib/auth.ts` (`getUserOrRedirect`, `getProfile`). `dashboard` (gate → onboarding si pas de profil). Racine `/` → redirect `/dashboard`.
+- **Artist Profile** : `lib/domain/profile.ts` (Zod `ProfileSchema` + `parseList`/`listToString`), `components/profile-form.tsx` (select natif pour posture image), pages `onboarding` (création) + `profile` (édition), action `saveProfile` (upsert `user_id` posé serveur).
+
+### Vérifs passées
+- `npm run build` OK (8 routes + "ƒ Proxy (Middleware)").
+- Protection routes : `/dashboard` et `/` → **307 → /login** ; `/login` → 200 avec formulaire. ✅
+
+### ⚠️ À finir de tester (nécessite action user)
+- **"Confirm email" est ACTIVÉ** sur le projet Supabase (probe API : signup → user sans session + `confirmation_sent_at`).
+  → Pour le flow "signup = login immédiat" en dev : **désactiver** Authentication → Sign In/Providers → Email → *Confirm email*. Sinon, confirmer via le lien reçu par email (la route `auth/callback` gère l'échange de code).
+- Ensuite : créer un compte dans le navigateur → onboarding → remplir profil → dashboard affiche le nom d'artiste → déconnexion.
+
+---
+
+## Prochaine étape : J3 — Releases + moteur de timeline
+- CRUD Release (titre, type, date, BPM, mood, cover, DSP, parent EP).
+- Moteur de fenêtre **pur** dans `lib/domain/timeline.ts` : template (SPRINT/MARATHON/IMPACT) + release_date → ancres J-21/J-14/J-7/J-Day/J+X. Testé isolément.
