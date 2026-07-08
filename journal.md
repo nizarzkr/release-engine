@@ -60,5 +60,34 @@ Principe : Server Components par défaut (lecture), Client Components pour l'int
 
 ---
 
-## Prochaine étape : J1 — Schéma DB (7 tables) + RLS + types TypeScript
-Base vierge prête. On appliquera les migrations via l'outil Supabase (MCP `apply_migration`), on activera RLS sur chaque table avec le pattern `own_rows` (`auth.uid() = user_id`), puis on générera `src/types/database.types.ts`.
+---
+
+## J1 — Schéma DB + RLS + types ✅ COMPLET
+**Date : 2026-07-08** · commit `2f89f5e`
+
+### Fait
+- **3 migrations versionnées** dans `supabase/migrations/` (source de vérité) + appliquées sur le projet distant via MCP :
+  - `0001_init_schema` : 7 tables PRD + `updated_at` sur chacune + fonction `set_updated_at()` + triggers + index (`user_id` et toutes les FKs).
+  - `0002_rls_policies` : RLS + `GRANT ... TO authenticated` + **4 policies par table** (`own_select/insert/update/delete`), pattern `TO authenticated` + `(select auth.uid()) = user_id`, UPDATE avec `USING` + `WITH CHECK`.
+  - `0003_harden_rls_auto_enable` : `revoke execute` sur la fonction event-trigger préexistante `rls_auto_enable()` (fermeture surface RPC).
+- **Types TS générés** → `src/types/database.types.ts`. Clients Supabase typés `<Database>`.
+
+### Découvertes / notes
+- Le projet a un **event-trigger `rls_auto_enable()`** qui active la RLS sur toute nouvelle table automatiquement (rls_enabled=true dès la création). On applique quand même `enable row level security` dans la migration (idempotent + reproductible ailleurs).
+- `text + CHECK` conservé (pas d'enums Postgres) comme le PRD.
+
+### Vérifications passées
+- `list_tables` : 7 tables, RLS active. `pg_policies` : 4 policies/table.
+- **Test d'isolation RLS** (2 users simulés) : user A voit 1 ligne, user B voit 0 ; insertion usurpée par B → bloquée (`violates row-level security policy`). Données de test nettoyées (base à 0 ligne).
+- `get_advisors security` : **0 alerte**.
+- `npm run build` : OK avec clients typés.
+
+### Rappel régénération des types
+Après **toute** future migration : relancer `generate_typescript_types` et remplacer `src/types/database.types.ts`.
+
+---
+
+## Prochaine étape : J2 — Auth (login email + Google OAuth) + Artist Profile
+- Auth Supabase avec `@supabase/ssr` ; refresh de session via **`proxy.ts`** (ex-middleware, cf. Next 16).
+- Routes protégées, page login, callback OAuth.
+- Création de la ligne `artist_profile` côté app (décision J1) + formulaire de profil (DA, posture image, capacité…).
