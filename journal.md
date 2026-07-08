@@ -141,6 +141,32 @@ Après **toute** future migration : relancer `generate_typescript_types` et remp
 
 ---
 
-## Prochaine étape : J4 — Source Blocks (chaînon production→diffusion)
-- CRUD source_block (type, shoot_date, asset_link, status).
-- Comportement clé : passage à RUSHES_DISPO → proposer de basculer les content_items liés À_TOURNER → À_MONTER (la cascade ; les content_items arrivent en J5, donc J4 pose le modèle + l'action, testable pleinement une fois J5 en place).
+---
+
+## J4 — Source Blocks + cascade rushes ✅ CODE COMPLET (test navigateur côté user)
+**Date : 2026-07-08** · commit `a7838b5`
+
+### Décisions
+- Cascade en **bouton "un clic"** (pas auto). Gestion **dans la page détail release** (section Tournages). Modales **Base UI Dialog**.
+
+### Fait
+- **`lib/domain/source-block.ts`** : types (LIVE_SESSION/CLIP_SHOOT/STUDIO_DAY/OTHER), statuts (PLANIFIE/TOURNE/RUSHES_DISPO), labels, `SourceBlockSchema`.
+- **`releases/[id]/source-actions.ts`** : `createSourceBlock`/`updateSourceBlock`/`setSourceBlockStatus`/`deleteSourceBlock` + **`promoteRushesToEdit`** (cascade). Actions **sans redirect** → `{ok,error}` + `revalidatePath`.
+- **`source-block-dialog.tsx`** (Client) : modale create/edit, contrôlée (`open`/`onOpenChange`), ferme sur `ok`, form remonté (key `openCount`) à chaque ouverture pour reset `useActionState`.
+- **`source-blocks-section.tsx`** (Server async) : liste des tournages + badges statut + compteurs de contenus liés + boutons de statut (segmentés) + **CTA cascade** conditionnel (RUSHES_DISPO && À_TOURNER>0). Intégrée dans `releases/[id]/page.tsx`.
+
+### Vérifs passées
+- `npm run build` OK.
+- **Cascade testée en DB** (scénario 4 contenus) : seuls les contenus **liés** en A_TOURNER basculent en A_MONTER ; le contenu non lié reste A_TOURNER. ✅ Données de test nettoyées.
+
+### Note
+- La cascade `promoteRushesToEdit` retourne `void` (compat action de formulaire). En J5, on pourra la wrapper côté client pour un toast "N contenus basculés".
+- En J4 le CTA cascade ne s'affiche pas dans l'UI (0 contenu lié) — normal, il s'activera dès J5.
+
+---
+
+## Prochaine étape : J5 — Pipeline Kanban (⭐ rend l'app utilisable sans IA)
+- Board 4 colonnes (BACKLOG / À_TOURNER / À_MONTER / READY), `@hello-pangea/dnd`.
+- Création/édition **manuelle** de content_items (l'IA les générera en masse en J7).
+- Tags colorés auto, action PUBLIÉ = archivage (is_published), lien vers source_block.
+- C'est le jour où la cascade J4 s'illumine pour de vrai.

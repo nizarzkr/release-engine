@@ -98,6 +98,12 @@ export default async function ReleaseDetailPage({
 
         <div className="flex items-center gap-2">
           <Link
+            href={`/releases/${id}/board`}
+            className={buttonVariants({ size: "sm" })}
+          >
+            Ouvrir le pipeline
+          </Link>
+          <Link
             href={`/releases/${id}/edit`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
