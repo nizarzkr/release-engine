@@ -254,7 +254,31 @@ Après **toute** future migration : relancer `generate_typescript_types` et remp
 
 ---
 
-## Prochaine étape : J8 — Regénération à la carte
-- Bouton « Regénérer cette idée » sur une carte + micro-prompt libre (« plus drôle », « je n'ai pas ce synthé »…).
-- `generateObject` sur **un seul** `ContentItemSchema`, même thème/contexte, variation appliquée → met à jour la carte existante (pas d'insert).
-- Réutilise prompt.ts (variante « regen ») + getModel/getDecryptedKey.
+---
+
+## J8 — Regénération à la carte ✅ CODE COMPLET (regen réelle = test user, clé requise)
+**Date : 2026-07-08** · commit `ff7971c`
+
+### Décision
+- **Raffiner en place** : thème + `scheduled_date` conservés ; seuls `brief`/`format`/`platform`/`objective_tag` changent.
+
+### Fait
+- **`content-plan.ts`** : `RegeneratedItemSchema` (contenu seul, sans theme ni offset).
+- **`prompt.ts`** : `profileBlock` factorisé (partagé gen/regen) + `buildRegenPrompt` (garde le pilier, applique la variation, respecte posture image). **6 tests OK**.
+- **`generate-actions.ts`** : `pickProvider()` factorisé (utilisé par gen ET regen) + `regenerateContentItem` (update brief/format/platform/objective ; theme & date intacts).
+- **`content-dialog.tsx`** : bloc « ✨ Regénérer par IA » (micro-prompt + bouton) en tête de la modale ; ferme sur succès → la carte se rafraîchit.
+
+### Vérifs passées
+- 6/6 tests prompt regen. `npm run build` OK.
+
+### À tester côté user (clé requise)
+- Ouvrir une carte → micro-prompt « version plus courte » → Regénérer → nouveau brief, **même thème + même date**. Vérifier en DB que `theme`/`scheduled_date` inchangés.
+
+---
+
+## MEGA TEST prévu par le chef de projet avant de continuer
+L'utilisateur veut tester J2→J8 en conditions réelles (navigateur + clé Claude). Prérequis : « Confirm email » désactivé (ou confirmer via lien), une clé dans /settings.
+
+## Prochaine étape : J9 — Checklists (pré/post-sortie)
+- Templates cochables rattachés à la release (DSP, playlisting, pitch, visuels… / post-sortie), dates relatives.
+- CRUD `checklist_item` (déjà en base) ; probablement des templates par défaut à l'ouverture d'une release.

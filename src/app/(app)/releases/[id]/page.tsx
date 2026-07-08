@@ -7,6 +7,7 @@ import { TEMPLATE_META, type WindowTemplate } from "@/lib/domain/timeline";
 import { DSP_LABELS, type DspKey } from "@/lib/domain/release";
 import { TimelineView } from "@/components/timeline-view";
 import { SourceBlocksSection } from "@/components/source-blocks-section";
+import { ChecklistSection } from "@/components/checklist-section";
 import { deleteRelease } from "../actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -197,6 +198,7 @@ export default async function ReleaseDetailPage({
       </div>
 
       <SourceBlocksSection releaseId={id} />
+      <ChecklistSection releaseId={id} />
     </div>
   );
 }
