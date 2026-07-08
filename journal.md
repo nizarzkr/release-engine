@@ -225,7 +225,36 @@ Après **toute** future migration : relancer `generate_typescript_types` et remp
 
 ---
 
-## Prochaine étape : J7 — Content Engine (génération IA)
-- Schéma Zod `ContentPlanSchema` (§6.1 PRD) + `generateObject()` (Vercel AI SDK) via `getModel`.
-- System prompt : profil + release + thèmes + source blocks ; règles (posture image, distribution thèmes/fenêtre, capacité, temps forts, hooks scroll-stopping).
-- Bouton « Générer le plan » → ~20-25 content_items distribués sur la timeline (moteur J3), écrits en DB, affichés au board.
+---
+
+## J7 — Content Engine (génération IA) ✅ CODE COMPLET (génération réelle = test user, clé requise)
+**Date : 2026-07-08** · commit `11b198c`
+
+### Décisions
+- **4 piliers génériques** : Performance / Univers visuel / Coulisses / Storytelling (`DEFAULT_THEMES`).
+- **Auto-provider** : Claude > GPT > Gemini (défaut `claude-opus-4-8`). Cartes générées en **Backlog**.
+
+### Fait
+- **`lib/domain/content-plan.ts`** : `DEFAULT_THEMES`, `ContentItemSchema` (theme=string libre, format/objective enums, brief 5 champs, `suggested_day_offset`), `ContentPlanSchema`.
+- **`lib/ai/prompt.ts`** (PUR) : `buildContentPlanPrompt` — system encode les règles PRD §6.3 (posture image FACE/ANONYME/HYBRIDE, distribution piliers+fenêtre, capacité, temps forts, hook<3s, sons natifs, 20-25 items, bornes offset) ; prompt injecte le contexte §6.2. **9 tests OK**.
+- **`generate-actions.ts`** : `generateContentPlan` — provider auto, `generateObject({model:getModel(...), schema})`, map → insert `content_item` (BACKLOG, `scheduled_date = addDays(release_date, clamp(offset))`), messages d'erreur clairs (sans clé / clé invalide).
+- **`generate-plan-button.tsx`** : bouton « ✨ Générer le plan », état pending, succès (`N via <provider>`) / erreur.
+- **board page** : bouton en-tête + **CTA état vide** + `export const maxDuration = 300` ; sinon lien « Configure une clé IA ».
+
+### Outils de test réutilisables
+- Loader Node `@/` + relatifs sans extension : `scratchpad/alias-hooks.mjs` + `alias-register.mjs` → `node --import .../alias-register.mjs test.ts`. (Sert pour tester tout module aliasé, dont J8.)
+
+### Vérifs passées
+- 9/9 tests prompt. `npm run build` OK (route board, maxDuration).
+
+### À tester côté user (navigateur, nécessite une clé dans /settings)
+- `/releases/[id]/board` → « Générer le plan » → ~20-25 cartes en Backlog (hook/thème/plateforme/brief), `scheduled_date` dans la fenêtre. Vérifier la répartition sur les 4 piliers + la fenêtre.
+- Robustesse : sans clé → CTA « Configure une clé » ; clé invalide → message d'erreur (pas de crash).
+- ⚠️ Déploiement (J11) : `maxDuration=300` posé, mais Vercel Hobby plafonne ; prévoir un plan adéquat ou un modèle plus rapide si timeout.
+
+---
+
+## Prochaine étape : J8 — Regénération à la carte
+- Bouton « Regénérer cette idée » sur une carte + micro-prompt libre (« plus drôle », « je n'ai pas ce synthé »…).
+- `generateObject` sur **un seul** `ContentItemSchema`, même thème/contexte, variation appliquée → met à jour la carte existante (pas d'insert).
+- Réutilise prompt.ts (variante « regen ») + getModel/getDecryptedKey.

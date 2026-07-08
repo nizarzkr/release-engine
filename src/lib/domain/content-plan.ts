@@ -34,3 +34,20 @@ export const ContentPlanSchema = z.object({
 
 export type GeneratedContentItem = z.infer<typeof ContentItemSchema>;
 export type ContentPlan = z.infer<typeof ContentPlanSchema>;
+
+// Regénération d'UNE carte : on ne touche ni au pilier (theme) ni à la date
+// (suggested_day_offset) → schéma réduit au contenu.
+export const RegeneratedItemSchema = z.object({
+  format: z.enum(CONTENT_FORMATS),
+  platform: z.string(),
+  objective_tag: z.enum(OBJECTIVE_TAGS),
+  brief: z.object({
+    hook: z.string().describe("Accroche scroll-stopping (< 3 secondes)"),
+    concept: z.string(),
+    structure: z.string(),
+    sound_suggestion: z.string(),
+    cta: z.string(),
+  }),
+});
+
+export type RegeneratedItem = z.infer<typeof RegeneratedItemSchema>;

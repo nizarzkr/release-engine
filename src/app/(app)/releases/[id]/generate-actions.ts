@@ -16,8 +16,24 @@ import {
   addDays,
   type WindowTemplate,
 } from "@/lib/domain/timeline";
-import { ContentPlanSchema, DEFAULT_THEMES } from "@/lib/domain/content-plan";
-import { buildContentPlanPrompt } from "@/lib/ai/prompt";
+import {
+  ContentPlanSchema,
+  RegeneratedItemSchema,
+  DEFAULT_THEMES,
+} from "@/lib/domain/content-plan";
+import { buildContentPlanPrompt, buildRegenPrompt } from "@/lib/ai/prompt";
+
+/** Choisit la première clé configurée par ordre de priorité (Claude > GPT > Gemini). */
+async function pickProvider(): Promise<{
+  provider: AiProvider;
+  apiKey: string;
+} | null> {
+  for (const provider of AI_PROVIDER_ORDER) {
+    const apiKey = await getDecryptedKey(provider);
+    if (apiKey) return { provider, apiKey };
+  }
+  return null;
+}
 
 export type ContentPlanState = {
   ok?: boolean;
@@ -48,20 +64,11 @@ export async function generateContentPlan(
     return { error: "Release introuvable." };
   }
 
-  // Choix du provider : première clé disponible par ordre de priorité.
-  let provider: AiProvider | null = null;
-  let apiKey: string | null = null;
-  for (const p of AI_PROVIDER_ORDER) {
-    const k = await getDecryptedKey(p);
-    if (k) {
-      provider = p;
-      apiKey = k;
-      break;
-    }
-  }
-  if (!provider || !apiKey) {
+  const picked = await pickProvider();
+  if (!picked) {
     return { error: "Ajoute une clé API dans Réglages pour générer." };
   }
+  const { provider, apiKey } = picked;
 
   const { data: sourceBlocks } = await supabase
     .from("source_block")
@@ -126,4 +133,73 @@ export async function generateContentPlan(
 
   revalidatePath(`/releases/${releaseId}/board`);
   return { ok: true, count: rows.length, provider: AI_PROVIDERS[provider].label };
+}
+
+export type RegenState = { ok?: boolean; error?: string };
+
+export async function regenerateContentItem(
+  itemId: string,
+  releaseId: string,
+  _prev: RegenState,
+  formData: FormData,
+): Promise<RegenState> {
+  await getUserOrRedirect();
+
+  const microPrompt = (formData.get("micro_prompt") ?? "").toString().trim();
+  if (!microPrompt) {
+    return { error: "Décris la variation souhaitée." };
+  }
+
+  const profile = await getProfile();
+  if (!profile) return { error: "Complète d'abord ton profil artiste." };
+
+  const supabase = await createClient();
+  const [{ data: item }, { data: release }] = await Promise.all([
+    supabase.from("content_item").select("*").eq("id", itemId).maybeSingle(),
+    supabase.from("release").select("*").eq("id", releaseId).maybeSingle(),
+  ]);
+  if (!item || !release) return { error: "Contenu introuvable." };
+
+  const picked = await pickProvider();
+  if (!picked) {
+    return { error: "Ajoute une clé API dans Réglages pour regénérer." };
+  }
+
+  const { system, prompt } = buildRegenPrompt({
+    profile,
+    release,
+    item,
+    microPrompt,
+  });
+
+  let out;
+  try {
+    const { object } = await generateObject({
+      model: getModel(picked.provider, picked.apiKey),
+      schema: RegeneratedItemSchema,
+      schemaName: "regenerated_item",
+      system,
+      prompt,
+    });
+    out = object;
+  } catch {
+    return {
+      error: "La regénération a échoué (clé invalide, quota, ou réponse inattendue).",
+    };
+  }
+
+  // On ne touche ni au thème ni à la date programmée (raffiner en place).
+  const { error } = await supabase
+    .from("content_item")
+    .update({
+      format: out.format,
+      platform: out.platform,
+      objective_tag: out.objective_tag,
+      brief: out.brief,
+    })
+    .eq("id", itemId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/releases/${releaseId}/board`);
+  return { ok: true };
 }

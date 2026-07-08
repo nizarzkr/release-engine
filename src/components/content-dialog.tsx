@@ -8,6 +8,10 @@ import {
   type ContentState,
 } from "@/app/(app)/releases/[id]/content-actions";
 import {
+  regenerateContentItem,
+  type RegenState,
+} from "@/app/(app)/releases/[id]/generate-actions";
+import {
   CONTENT_FORMATS,
   FORMAT_LABELS,
   OBJECTIVE_TAGS,
@@ -99,6 +103,12 @@ function EditForm({
 
   return (
     <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
+      <RegenBlock
+        itemId={item.id}
+        releaseId={releaseId}
+        onSuccess={onSuccess}
+      />
+
       <form action={formAction} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <FieldSmall label="Thème" htmlFor="theme">
@@ -292,6 +302,49 @@ function FieldSmall({
       </Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function RegenBlock({
+  itemId,
+  releaseId,
+  onSuccess,
+}: {
+  itemId: string;
+  releaseId: string;
+  onSuccess: () => void;
+}) {
+  const [state, formAction, pending] = useActionState<RegenState, FormData>(
+    regenerateContentItem.bind(null, itemId, releaseId),
+    {},
+  );
+
+  useEffect(() => {
+    if (state.ok) onSuccess();
+  }, [state.ok, onSuccess]);
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border bg-muted/40 p-3">
+      <Label htmlFor="micro_prompt" className="text-xs font-medium">
+        ✨ Regénérer par IA
+      </Label>
+      <form action={formAction} className="flex gap-2">
+        <Input
+          id="micro_prompt"
+          name="micro_prompt"
+          placeholder="plus drôle, plus court, sans ce synthé…"
+          className="h-8 text-sm"
+          required
+        />
+        <Button type="submit" size="sm" variant="secondary" disabled={pending}>
+          {pending ? "…" : "Regénérer"}
+        </Button>
+      </form>
+      <p className="text-[11px] text-muted-foreground">
+        Garde le même pilier et la même date ; ne retravaille que le contenu.
+      </p>
+      {state.error && <p className="text-xs text-destructive">{state.error}</p>}
     </div>
   );
 }

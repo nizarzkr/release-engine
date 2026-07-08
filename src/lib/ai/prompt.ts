@@ -1,6 +1,7 @@
 import type { Tables } from "@/types/database.types";
 import { formatOffset, type Timeline } from "@/lib/domain/timeline";
 import { formatDateFr } from "@/lib/format";
+import type { Brief } from "@/lib/domain/content";
 
 type SourceBlockLite = {
   type: string;
@@ -20,6 +21,21 @@ const STANCE_RULES: Record<string, string> = {
 function list(values: string[] | null | undefined, fallback: string): string {
   const v = (values ?? []).filter(Boolean);
   return v.length ? v.join(", ") : fallback;
+}
+
+/** Bloc de contexte profil, réutilisé par la génération et la regénération. */
+function profileBlock(profile: Tables<"artist_profile">): string {
+  return [
+    "# PROFIL ARTISTE",
+    `Nom : ${profile.artist_name}`,
+    `Genres : ${list(profile.genres, "non précisé")}`,
+    `Références artistiques : ${list(profile.references_art, "non précisé")}`,
+    `Mots-clés DA : ${list(profile.da_keywords, "non précisé")}`,
+    `Posture image : ${profile.image_stance ?? "HYBRIDE"}`,
+    `Plateformes : ${list(profile.platforms, "TikTok, Instagram")}`,
+    `Capacité de production : ${profile.weekly_capacity ?? 3} contenus / semaine`,
+    `Contraintes : ${profile.constraints?.trim() || "aucune précisée"}`,
+  ].join("\n");
 }
 
 /**
@@ -77,15 +93,7 @@ export function buildContentPlanPrompt({
   ].join("\n");
 
   const prompt = [
-    "# PROFIL ARTISTE",
-    `Nom : ${profile.artist_name}`,
-    `Genres : ${list(profile.genres, "non précisé")}`,
-    `Références artistiques : ${list(profile.references_art, "non précisé")}`,
-    `Mots-clés DA : ${list(profile.da_keywords, "non précisé")}`,
-    `Posture image : ${profile.image_stance ?? "HYBRIDE"}`,
-    `Plateformes : ${list(profile.platforms, "TikTok, Instagram")}`,
-    `Capacité de production : ${profile.weekly_capacity ?? 3} contenus / semaine`,
-    `Contraintes : ${profile.constraints?.trim() || "aucune précisée"}`,
+    profileBlock(profile),
     "",
     "# SORTIE À PROMOUVOIR",
     `Titre : ${release.title}`,
@@ -106,6 +114,64 @@ export function buildContentPlanPrompt({
     "",
     "# TÂCHE",
     "Génère le plan de contenu (20-25 items) au format demandé. Pour chaque item : choisis un pilier, un format, une plateforme parmi celles de l'artiste, un objectif, un brief complet (hook, concept, structure, suggestion son, CTA) et un suggested_day_offset cohérent avec la fenêtre et les temps forts.",
+  ].join("\n");
+
+  return { system, prompt };
+}
+
+/**
+ * Regénération d'UNE idée existante en appliquant un micro-prompt.
+ * Garde le pilier (thème) et la date : ne renvoie que le contenu.
+ * Fonction PURE — testable isolément.
+ */
+export function buildRegenPrompt({
+  profile,
+  release,
+  item,
+  microPrompt,
+}: {
+  profile: Tables<"artist_profile">;
+  release: Tables<"release">;
+  item: Tables<"content_item">;
+  microPrompt: string;
+}): { system: string; prompt: string } {
+  const stanceRule =
+    STANCE_RULES[profile.image_stance ?? "HYBRIDE"] ?? STANCE_RULES.HYBRIDE;
+  const brief = (item.brief ?? {}) as Partial<Brief>;
+
+  const system = [
+    "Tu es un directeur de contenu expert des réseaux sociaux pour artistes musicaux indépendants.",
+    "Tu régénères UNE idée de contenu existante en appliquant la variation demandée par l'artiste.",
+    "",
+    "RÈGLES IMPÉRATIVES :",
+    `1. ${stanceRule}`,
+    "2. GARDE le même pilier (thème) et le même moment de publication : ne retravaille que le CONTENU (hook, concept, structure, son, CTA, format, plateforme, objectif).",
+    "3. Applique fidèlement la demande de variation de l'artiste.",
+    "4. Le hook doit rester scroll-stopping dans les 3 premières secondes.",
+    "5. Suggère un son natif / trend cohérent avec le genre.",
+    "6. Écris en français, reste concret.",
+  ].join("\n");
+
+  const prompt = [
+    profileBlock(profile),
+    "",
+    "# SORTIE",
+    `Titre : ${release.title} · Mood : ${release.mood?.trim() || "non précisé"}`,
+    "",
+    "# IDÉE ACTUELLE (à retravailler — garder ce pilier)",
+    `Pilier : ${item.theme}`,
+    `Format : ${item.format ?? "SHORT"} · Plateforme : ${item.platform ?? "non précisé"} · Objectif : ${item.objective_tag ?? "non précisé"}`,
+    `Hook : ${brief.hook ?? ""}`,
+    `Concept : ${brief.concept ?? ""}`,
+    `Structure : ${brief.structure ?? ""}`,
+    `Son : ${brief.sound_suggestion ?? ""}`,
+    `CTA : ${brief.cta ?? ""}`,
+    "",
+    "# DEMANDE DE VARIATION",
+    microPrompt,
+    "",
+    "# TÂCHE",
+    "Régénère cette idée en appliquant la variation. Renvoie le nouveau contenu (format, plateforme, objectif, brief complet).",
   ].join("\n");
 
   return { system, prompt };
