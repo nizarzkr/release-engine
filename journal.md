@@ -113,6 +113,34 @@ Après **toute** future migration : relancer `generate_typescript_types` et remp
 
 ---
 
-## Prochaine étape : J3 — Releases + moteur de timeline
-- CRUD Release (titre, type, date, BPM, mood, cover, DSP, parent EP).
-- Moteur de fenêtre **pur** dans `lib/domain/timeline.ts` : template (SPRINT/MARATHON/IMPACT) + release_date → ancres J-21/J-14/J-7/J-Day/J+X. Testé isolément.
+---
+
+## J3 — Releases + moteur de timeline ✅ CODE COMPLET (test navigateur côté user)
+**Date : 2026-07-08** · commit `353cc61`
+
+### Décisions
+- Jalons par template validés (SPRINT pre21/post7 ; MARATHON pre35/post21 ; IMPACT pre56/post28).
+- **Cover retirée** du formulaire (colonne `cover_url` conservée mais non exposée).
+- Timeline **calculée à la volée** (jamais stockée) → recalcul auto si la date change.
+
+### Fait
+- **`lib/domain/timeline.ts`** (moteur PUR) : `buildTimeline`, `addDays` UTC-safe, `formatOffset`, tables `TEMPLATES`/`TEMPLATE_META`. **17 tests unitaires passent** (dates exactes, passage d'année, DST, nb de jalons).
+- **`lib/domain/release.ts`** : `ReleaseSchema` (Zod v4) + `parseDspLinks`/`parseOptionalInt`/`parseOptionalText`.
+- **`releases/actions.ts`** : `createRelease`/`updateRelease`/`deleteRelease` (user_id posé serveur, RLS).
+- **UI** : `release-form.tsx` (partagé création/édition), `timeline-view.tsx` (visualisation jalons colorés par phase), pages `releases` (liste), `new`, `[id]` (détail + timeline + EP↔singles), `[id]/edit`. Nav "Releases" + CTA dashboard. `lib/format.ts` (formatDateFr UTC).
+
+### Piège rencontré / résolu
+- Le `Button` shadcn de cette version utilise **Base UI** (pas Radix) → **pas de `asChild`**. Solution : styler les `Link` avec `buttonVariants({variant,size})`. (À réutiliser pour tout lien-bouton.)
+
+### Vérifs passées
+- Moteur : 17/17 tests unitaires (via `node` TS natif).
+- `npm run build` OK (12 routes).
+
+### À tester côté user (navigateur, serveur dev déjà lancé)
+- `/releases` → créer une release MARATHON → détail affiche la timeline correcte ; éditer la date → timeline recalculée ; créer un single rattaché à un EP → visible sous l'EP ; supprimer.
+
+---
+
+## Prochaine étape : J4 — Source Blocks (chaînon production→diffusion)
+- CRUD source_block (type, shoot_date, asset_link, status).
+- Comportement clé : passage à RUSHES_DISPO → proposer de basculer les content_items liés À_TOURNER → À_MONTER (la cascade ; les content_items arrivent en J5, donc J4 pose le modèle + l'action, testable pleinement une fois J5 en place).
