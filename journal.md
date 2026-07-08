@@ -165,8 +165,36 @@ Après **toute** future migration : relancer `generate_typescript_types` et remp
 
 ---
 
-## Prochaine étape : J5 — Pipeline Kanban (⭐ rend l'app utilisable sans IA)
-- Board 4 colonnes (BACKLOG / À_TOURNER / À_MONTER / READY), `@hello-pangea/dnd`.
-- Création/édition **manuelle** de content_items (l'IA les générera en masse en J7).
-- Tags colorés auto, action PUBLIÉ = archivage (is_published), lien vers source_block.
-- C'est le jour où la cascade J4 s'illumine pour de vrai.
+---
+
+## J5 — Pipeline Kanban ✅ CODE COMPLET (test DnD navigateur côté user)
+**Date : 2026-07-08** · commit `314b3a9`
+
+### Décisions
+- Board **par release** (`/releases/[id]/board`). Ajout **rapide** + édition **complète** (modale). DnD **optimiste**. Tags auto **calculés**.
+
+### Fait
+- `@hello-pangea/dnd@18.0.1` (compatible React 19).
+- **`lib/domain/content.ts`** : `PIPELINE_STATUSES`/`CONTENT_FORMATS`/`OBJECTIVE_TAGS` + labels, type `Brief`, `QuickContentSchema` + `ContentSchema`, `cardTitle`.
+- **`lib/domain/content-tags.ts`** : `computeAutoTags` (pur) — « Rushes manquants » / « Prêt à monter » / « En retard ». **8 tests OK**.
+- **`content-actions.ts`** : `createContent` (quick), `updateContent` (full, assemble le brief), `moveContent` (persiste le DnD), `publishContent` (is_published=true), `deleteContent`.
+- **UI** : `board/page.tsx` (server : charge contenus non publiés + tournages, calcule tags auto, compteur publiés) ; `kanban-board.tsx` (Client : DragDropContext 4 colonnes, état optimiste + resync sur nouvelles props, quick-add en Backlog) ; `content-card.tsx` (présentation + type `BoardItem`) ; `content-dialog.tsx` (édition complète + publier/supprimer). Lien « Ouvrir le pipeline » depuis la page release.
+
+### Points techniques
+- Board client : `useState(group(items))` + `useEffect([items])` pour resync quand le serveur revalide (create/edit/publish/delete/move).
+- QuickAdd : reset via `key` incrémenté, dépendance `[state]` (nouvel objet à chaque submit) — pas `[state.ok]` (sinon pas de reset au 2e ajout).
+- Pas d'ordre intra-colonne persistant (tri serveur par scheduled_date puis created_at).
+
+### Vérifs passées
+- 8/8 tests `computeAutoTags`. `npm run build` OK (route board présente). Runtime : `/releases/[id]/board` → 307 (proxy), 0 erreur serveur.
+- **Reste à tester en navigateur** (demain) : DnD entre colonnes + persistance au reload ; ajout rapide ; édition/brief ; cascade J4 → carte À_MONTER ; publier = archiver.
+
+### Cascade J4 ↔ J5
+- Le CTA cascade de la section Tournages s'affichera désormais quand un tournage RUSHES_DISPO a des contenus liés À_TOURNER (relier un contenu à un tournage via la modale d'édition de carte).
+
+---
+
+## Prochaine étape : J6 — Infra IA (BYOK)
+- Table `api_key` (déjà en base). Chiffrement au repos avec `BYOK_ENCRYPTION_KEY` (déjà dans `.env.local`).
+- UI d'ajout/test de clé par provider (ANTHROPIC/OPENAI/GOOGLE).
+- Couche d'abstraction multi-provider (Vercel AI SDK) — sans encore générer (génération = J7).

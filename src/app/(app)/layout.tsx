@@ -30,6 +30,9 @@ export default async function AppLayout({
               <Link href="/profile" className="hover:text-foreground">
                 Profil
               </Link>
+              <Link href="/settings" className="hover:text-foreground">
+                Réglages
+              </Link>
             </nav>
           </div>
 

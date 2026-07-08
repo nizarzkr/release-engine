@@ -21,6 +21,7 @@ export type Database = {
           created_at: string | null
           encrypted_key: string
           id: string
+          key_hint: string | null
           provider: string
           updated_at: string | null
           user_id: string
@@ -29,6 +30,7 @@ export type Database = {
           created_at?: string | null
           encrypted_key: string
           id?: string
+          key_hint?: string | null
           provider: string
           updated_at?: string | null
           user_id: string
@@ -37,6 +39,7 @@ export type Database = {
           created_at?: string | null
           encrypted_key?: string
           id?: string
+          key_hint?: string | null
           provider?: string
           updated_at?: string | null
           user_id?: string
