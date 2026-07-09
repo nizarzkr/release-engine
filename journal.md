@@ -279,6 +279,28 @@ Après **toute** future migration : relancer `generate_typescript_types` et remp
 ## MEGA TEST prévu par le chef de projet avant de continuer
 L'utilisateur veut tester J2→J8 en conditions réelles (navigateur + clé Claude). Prérequis : « Confirm email » désactivé (ou confirmer via lien), une clé dans /settings.
 
-## Prochaine étape : J9 — Checklists (pré/post-sortie)
-- Templates cochables rattachés à la release (DSP, playlisting, pitch, visuels… / post-sortie), dates relatives.
-- CRUD `checklist_item` (déjà en base) ; probablement des templates par défaut à l'ouverture d'une release.
+---
+
+## J9 — Checklists pré/post-sortie ✅ CODE COMPLET (sans dépendance IA)
+**Date : 2026-07-08** · commit `875ddad`
+
+### Décisions
+- **Template générique adopté** (13 tâches). **Bouton explicite** « Ajouter la checklist type » (pas d'auto-insertion). Section sur la page détail release (sous Tournages).
+
+### Fait
+- **`lib/domain/checklist.ts`** : `CHECKLIST_PHASES` (PRE/POST), `DEFAULT_CHECKLIST` (13 tâches avec offsets), `checklistRowsForRelease` (pure, dates via `addDays`). **6 tests OK**.
+- **`checklist-actions.ts`** : `seedChecklist` (applique le template), `addChecklistItem`, `toggleChecklistItem`, `deleteChecklistItem`.
+- **`checklist-section.tsx`** (Server) : état vide + bouton seed ; groupes PRE/POST ; cochage **sans JS client** (boutons dans des forms à action liée) ; progression X/Y ; ajout/suppression de tâche. Intégrée dans la page détail release.
+
+### Vérifs passées
+- 6/6 tests `checklistRowsForRelease` (J-28 → 2027-01-03, J-Day → date sortie, J+21 → +21j ; 9 PRE / 4 POST). `npm run build` OK.
+- Module **testable pleinement sans clé IA** (juste besoin d'être connecté).
+
+### À tester côté user
+- Release → section Checklist → « Ajouter la checklist type » → 13 tâches datées ; cocher/décocher ; ajouter/supprimer.
+
+---
+
+## Prochaine étape : J10 — Dashboard & Calendrier multi-release
+- Dashboard « quoi faire cette semaine » (cross-release) : content_items à tourner/monter/publier + checklist_items à échéance proche.
+- Calendrier multi-release **lecture seule** : toutes les releases actives + leurs fenêtres, pour anticiper les chevauchements de promo.

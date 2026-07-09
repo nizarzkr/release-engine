@@ -27,6 +27,9 @@ export default async function AppLayout({
               <Link href="/releases" className="hover:text-foreground">
                 Releases
               </Link>
+              <Link href="/calendar" className="hover:text-foreground">
+                Calendrier
+              </Link>
               <Link href="/profile" className="hover:text-foreground">
                 Profil
               </Link>

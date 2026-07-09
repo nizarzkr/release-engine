@@ -122,3 +122,12 @@ export function formatOffset(offset: number): string {
   if (offset === 0) return "J-Day";
   return offset < 0 ? `J${offset}` : `J+${offset}`;
 }
+
+/** Nombre de jours de `fromIso` à `toIso` (UTC, entier signé). */
+export function daysBetween(fromIso: string, toIso: string): number {
+  const [fy, fm, fd] = fromIso.split("-").map(Number);
+  const [ty, tm, td] = toIso.split("-").map(Number);
+  const from = Date.UTC(fy, fm - 1, fd);
+  const to = Date.UTC(ty, tm - 1, td);
+  return Math.round((to - from) / 86_400_000);
+}
