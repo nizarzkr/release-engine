@@ -322,7 +322,37 @@ L'utilisateur veut tester J2→J8 en conditions réelles (navigateur + clé Clau
 
 ---
 
-## Prochaine étape : J11 — Polish & déploiement (V1)
+---
+
+## J11 — Retours mega test : calendrier réel + formats personnalisables 🔬 CODE COMPLET (test navigateur côté user)
+**Date : 2026-07-09** · pas encore commité
+
+Suite au mega test, 2 retours utilisateur. Découpage en 3 blocs : **A** (calendrier in-app) + **C** (templates) faits cette session ; **B** (synchro Google Calendar 2 sens, OAuth) planifié — dépend d'une config Google Cloud côté user, app en localhost pour l'instant.
+
+### Bloc A — Vrai calendrier mensuel (remplace le Gantt) ✅
+- **`lib/domain/calendar-month.ts`** (PUR) : `buildMonthGrid(year, month, events, today)` → grille semaines lundi→dimanche, nav mois±1 (passage d'année), events rangés par date, `totalEvents` ne compte que le mois. **20 tests OK**.
+- **`calendar/page.tsx`** réécrit : agrège 3 sources → events (🟢 sorties, 🔵 contenus non publiés `scheduled_date`, 🟠 checklist non faits `due_date`), mêmes filtres que le dashboard. `?y=&m=` pour naviguer.
+- **`release-calendar.tsx`** réécrit en grille (pastilles couleur cliquables → board/release, +N débordement, aujourd'hui entouré, `overflow-x-auto`). **Ancien `lib/domain/calendar.ts` (Gantt) supprimé.**
+
+### Bloc C — Formats de release personnalisables ✅
+- **Migration `0005_release_templates`** (appliquée) : table `release_template(user_id, name, description, milestones jsonb, is_builtin)` + trigger updated_at + RLS 4 policies (0 alerte advisor). `release` : drop CHECK `window_template`, **ajout `milestones jsonb`** (snapshot). Backfill des releases existantes (jalons + `window_template` → nom lisible). Types régénérés.
+- **Modèle SNAPSHOT** : chaque release fige les jalons du format choisi à la création → éditer/supprimer un format ne casse jamais une release existante (pas de FK, pas de reflow surprise). `window_template` = **nom** du format (libellé libre).
+- **`timeline.ts`** : cœur `buildTimelineFromMilestones(milestones, date, label?)` ; `buildTimeline(template, date)` conservé (17 tests) ; export `DEFAULT_TEMPLATES` (3 formats semés).
+- **`release-template.ts`** : `MilestoneSchema`/`ReleaseTemplateSchema` (Zod), `templateSummary`, `coerceMilestones` (lecture défensive du JSON DB). **20 tests OK** (avec timeline).
+- **`lib/templates.ts`** : `listTemplates()` (server-only) avec **seeding paresseux** des 3 défauts au 1er accès (users existants + nouveaux).
+- **`settings/template-actions.ts`** : create/update/delete/duplicate (jalons via tableaux parallèles `m_label/m_offset/m_phase`).
+- **UI** : `template-manager.tsx` (liste + dialog éditeur de jalons dynamique) dans `/settings` ; `release-form.tsx` charge les templates (select `template_id`, résolu → snapshot côté action) ; `timeline-view` prend `milestones` ; list/détail affichent le nom du format ; `generate-actions` utilise les jalons snapshot.
+
+### Vérifs passées
+- `npm run build` OK (14 routes, TS clean). 20/20 tests calendrier + 20/20 tests templates/timeline. Advisors sécurité : 0 alerte sur les nouvelles tables.
+
+### À tester côté user (navigateur)
+- Calendrier : grille mois, nav, 3 types d'events cliquables (validé ✅).
+- Réglages → Formats : 3 défauts semés ; créer/éditer/dupliquer/supprimer un format ; créer une release avec un format perso → timeline = jalons du format ; éditer le format ensuite ne doit PAS changer la release déjà créée (snapshot).
+
+---
+
+## Prochaine étape : Bloc B (Google Calendar 2 sens) puis J-polish & déploiement (V1)
 - Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
 - Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
 - Envisager : activer « Confirm email » Auth, activer Leaked Password Protection (advisor J6).

@@ -11,11 +11,8 @@ import {
   AI_PROVIDERS,
   type AiProvider,
 } from "@/lib/ai/config";
-import {
-  buildTimeline,
-  addDays,
-  type WindowTemplate,
-} from "@/lib/domain/timeline";
+import { buildTimelineFromMilestones, addDays } from "@/lib/domain/timeline";
+import { coerceMilestones } from "@/lib/domain/release-template";
 import {
   ContentPlanSchema,
   RegeneratedItemSchema,
@@ -75,9 +72,10 @@ export async function generateContentPlan(
     .select("type, status, shoot_date")
     .eq("release_id", releaseId);
 
-  const timeline = buildTimeline(
-    (release.window_template ?? "MARATHON") as WindowTemplate,
+  const timeline = buildTimelineFromMilestones(
+    coerceMilestones(release.milestones),
     release.release_date,
+    release.window_template ?? "",
   );
   const { system, prompt } = buildContentPlanPrompt({
     profile,

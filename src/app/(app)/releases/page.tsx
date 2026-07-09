@@ -2,8 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUserOrRedirect } from "@/lib/auth";
 import { formatDateFr } from "@/lib/format";
-import { TEMPLATE_META } from "@/lib/domain/timeline";
-import type { WindowTemplate } from "@/lib/domain/timeline";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -61,10 +59,7 @@ export default async function ReleasesPage() {
                       <Badge variant="secondary">
                         {r.type === "EP" ? "EP" : "Single"}
                       </Badge>
-                      <Badge variant="outline">
-                        {TEMPLATE_META[r.window_template as WindowTemplate]
-                          ?.label ?? r.window_template}
-                      </Badge>
+                      <Badge variant="outline">{r.window_template}</Badge>
                     </div>
                   </CardContent>
                 </Card>

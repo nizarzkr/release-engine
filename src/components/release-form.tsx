@@ -2,8 +2,9 @@
 
 import { useActionState } from "react";
 import type { ReleaseState } from "@/app/(app)/releases/actions";
+import Link from "next/link";
 import { RELEASE_TYPES, DSP_KEYS, DSP_LABELS } from "@/lib/domain/release";
-import { WINDOW_TEMPLATES, TEMPLATE_META } from "@/lib/domain/timeline";
+import { templateSummary } from "@/lib/domain/release-template";
 import type { Tables } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,18 +14,26 @@ const selectClass =
   "h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 type ParentOption = { id: string; title: string };
+type TemplateOption = Pick<Tables<"release_template">, "id" | "name" | "milestones">;
 
 export function ReleaseForm({
   initial,
   parents,
+  templates,
   action,
   submitLabel = "Enregistrer",
 }: {
   initial: Tables<"release"> | null;
   parents: ParentOption[];
+  templates: TemplateOption[];
   action: (prev: ReleaseState, formData: FormData) => Promise<ReleaseState>;
   submitLabel?: string;
 }) {
+  // Pré-sélection en édition : le format dont le nom == window_template figé.
+  const defaultTemplateId =
+    templates.find((t) => t.name === initial?.window_template)?.id ??
+    templates[0]?.id ??
+    "";
   const [state, formAction, pending] = useActionState<ReleaseState, FormData>(
     action,
     {},
@@ -72,22 +81,32 @@ export function ReleaseForm({
       </div>
 
       <Field
-        label="Template de fenêtre"
-        htmlFor="window_template"
+        label="Format de release"
+        htmlFor="template_id"
         hint="Détermine la durée de la campagne et les jalons de contenu."
       >
         <select
-          id="window_template"
-          name="window_template"
-          defaultValue={initial?.window_template ?? "MARATHON"}
+          id="template_id"
+          name="template_id"
+          defaultValue={defaultTemplateId}
           className={selectClass}
         >
-          {WINDOW_TEMPLATES.map((w) => (
-            <option key={w} value={w}>
-              {TEMPLATE_META[w].label} — {TEMPLATE_META[w].weeks} semaines
-            </option>
-          ))}
+          {templates.map((t) => {
+            const s = templateSummary(t.milestones);
+            return (
+              <option key={t.id} value={t.id}>
+                {t.name} — {s.weeks} sem · {s.count} jalons
+              </option>
+            );
+          })}
         </select>
+        <p className="text-xs text-muted-foreground">
+          Personnalise tes formats dans{" "}
+          <Link href="/settings" className="underline underline-offset-2">
+            Réglages
+          </Link>
+          .
+        </p>
       </Field>
 
       <div className="grid grid-cols-2 gap-4">

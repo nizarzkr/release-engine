@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserOrRedirect } from "@/lib/auth";
 import { formatDateFr } from "@/lib/format";
-import { TEMPLATE_META, type WindowTemplate } from "@/lib/domain/timeline";
+import { coerceMilestones } from "@/lib/domain/release-template";
 import { DSP_LABELS, type DspKey } from "@/lib/domain/release";
 import { TimelineView } from "@/components/timeline-view";
 import { SourceBlocksSection } from "@/components/source-blocks-section";
@@ -77,9 +77,7 @@ export default async function ReleaseDetailPage({
             <Badge variant="secondary">
               {release.type === "EP" ? "EP" : "Single"}
             </Badge>
-            <Badge variant="outline">
-              {TEMPLATE_META[release.window_template as WindowTemplate]?.label}
-            </Badge>
+            <Badge variant="outline">{release.window_template}</Badge>
             <span className="text-sm text-muted-foreground">
               Sortie le {formatDateFr(release.release_date)}
             </span>
@@ -125,7 +123,7 @@ export default async function ReleaseDetailPage({
           </CardHeader>
           <CardContent>
             <TimelineView
-              template={release.window_template as WindowTemplate}
+              milestones={coerceMilestones(release.milestones)}
               releaseDate={release.release_date}
             />
           </CardContent>

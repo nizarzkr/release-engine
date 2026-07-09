@@ -89,33 +89,60 @@ export function addDays(isoDate: string, days: number): string {
 }
 
 /**
- * Construit la timeline d'une release à partir de son template et de sa date.
- * Jalons triés par offset croissant.
+ * Cœur PUR : construit une timeline à partir d'une liste de jalons libres
+ * (le format n'est plus figé dans le code — cf. templates personnalisables).
+ * Jalons triés par offset croissant. `template` est un simple libellé.
  */
-export function buildTimeline(
-  template: WindowTemplate,
+export function buildTimelineFromMilestones(
+  milestones: MilestoneDef[],
   releaseDate: string,
+  template = "",
 ): Timeline {
-  const defs = [...TEMPLATES[template]].sort((a, b) => a.offset - b.offset);
-  const milestones: Milestone[] = defs.map((def) => ({
+  const defs = [...milestones].sort((a, b) => a.offset - b.offset);
+  const dated: Milestone[] = defs.map((def) => ({
     ...def,
     date: addDays(releaseDate, def.offset),
   }));
 
-  const offsets = defs.map((d) => d.offset);
+  const offsets = defs.length ? defs.map((d) => d.offset) : [0];
   const first = Math.min(...offsets);
   const last = Math.max(...offsets);
 
   return {
-    template,
+    template: template as WindowTemplate,
     releaseDate,
     startDate: addDays(releaseDate, first),
     endDate: addDays(releaseDate, last),
     preDays: Math.abs(first),
     postDays: last,
-    milestones,
+    milestones: dated,
   };
 }
+
+/**
+ * Timeline d'un des 3 formats intégrés (conservé pour les tests unitaires
+ * et comme source des templates par défaut semés par utilisateur).
+ */
+export function buildTimeline(
+  template: WindowTemplate,
+  releaseDate: string,
+): Timeline {
+  return buildTimelineFromMilestones(TEMPLATES[template], releaseDate, template);
+}
+
+/**
+ * Formats par défaut semés pour chaque nouvel utilisateur (nom + jalons).
+ * Dérivés des 3 templates intégrés + leurs métadonnées.
+ */
+export const DEFAULT_TEMPLATES: {
+  name: string;
+  description: string;
+  milestones: MilestoneDef[];
+}[] = WINDOW_TEMPLATES.map((key) => ({
+  name: TEMPLATE_META[key].label,
+  description: TEMPLATE_META[key].description,
+  milestones: TEMPLATES[key].map((m, i) => ({ ...m, key: String(i) })),
+}));
 
 /** Formatage court d'un offset : "J-14", "J-Day", "J+7". */
 export function formatOffset(offset: number): string {

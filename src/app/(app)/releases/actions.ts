@@ -10,22 +10,52 @@ import {
   parseOptionalInt,
   parseOptionalText,
 } from "@/lib/domain/release";
+import { coerceMilestones } from "@/lib/domain/release-template";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database.types";
 
 export type ReleaseState = { error?: string };
 
-function parseForm(formData: FormData) {
+/**
+ * Valide le formulaire ET fige un snapshot des jalons du template choisi
+ * (`template_id`) → éditer/supprimer le format ensuite ne touche pas la release.
+ */
+async function parseForm(
+  formData: FormData,
+  supabase: SupabaseClient<Database>,
+) {
+  const templateId = (formData.get("template_id") ?? "").toString();
+  const { data: template } = await supabase
+    .from("release_template")
+    .select("name, milestones")
+    .eq("id", templateId)
+    .maybeSingle();
+
+  if (!template) {
+    return { success: false as const, message: "Format de release invalide." };
+  }
+
   const parentRaw = formData.get("parent_release_id");
-  return ReleaseSchema.safeParse({
+  const parsed = ReleaseSchema.safeParse({
     title: (formData.get("title") ?? "").toString().trim(),
     type: formData.get("type"),
     release_date: (formData.get("release_date") ?? "").toString(),
-    window_template: formData.get("window_template"),
+    window_template: template.name,
+    milestones: coerceMilestones(template.milestones),
     bpm: parseOptionalInt(formData.get("bpm")),
     mood: parseOptionalText(formData.get("mood")),
     parent_release_id:
       typeof parentRaw === "string" && parentRaw ? parentRaw : null,
     dsp_links: parseDspLinks(formData),
   });
+
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      message: parsed.error.issues[0]?.message ?? "Champs invalides.",
+    };
+  }
+  return { success: true as const, data: parsed.data };
 }
 
 export async function createRelease(
@@ -33,12 +63,12 @@ export async function createRelease(
   formData: FormData,
 ): Promise<ReleaseState> {
   const user = await getUserOrRedirect();
-  const parsed = parseForm(formData);
+  const supabase = await createClient();
+  const parsed = await parseForm(formData, supabase);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Champs invalides." };
+    return { error: parsed.message };
   }
 
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from("release")
     .insert({ user_id: user.id, ...parsed.data })
@@ -59,12 +89,12 @@ export async function updateRelease(
   formData: FormData,
 ): Promise<ReleaseState> {
   await getUserOrRedirect();
-  const parsed = parseForm(formData);
+  const supabase = await createClient();
+  const parsed = await parseForm(formData, supabase);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Champs invalides." };
+    return { error: parsed.message };
   }
 
-  const supabase = await createClient();
   const { error } = await supabase
     .from("release")
     .update(parsed.data)

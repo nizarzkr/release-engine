@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { WINDOW_TEMPLATES } from "./timeline";
+import { MilestoneSchema } from "./release-template";
 
 export const RELEASE_TYPES = ["SINGLE", "EP"] as const;
 export type ReleaseType = (typeof RELEASE_TYPES)[number];
@@ -23,7 +23,9 @@ export const ReleaseSchema = z.object({
   release_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date de sortie requise." }),
-  window_template: z.enum(WINDOW_TEMPLATES),
+  // Nom du format choisi (libellé libre) + snapshot de ses jalons.
+  window_template: z.string().min(1, { error: "Format de release requis." }),
+  milestones: z.array(MilestoneSchema).min(1, { error: "Jalons manquants." }),
   bpm: z
     .number()
     .int({ error: "BPM entier attendu." })

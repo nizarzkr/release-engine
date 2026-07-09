@@ -1,11 +1,16 @@
 import { getUserOrRedirect } from "@/lib/auth";
 import { listKeyStatuses } from "@/lib/ai/keys";
 import { AI_PROVIDER_ORDER } from "@/lib/ai/config";
+import { listTemplates } from "@/lib/templates";
 import { ApiKeyForm } from "@/components/api-key-form";
+import { TemplateManager } from "@/components/template-manager";
 
 export default async function SettingsPage() {
   await getUserOrRedirect();
-  const statuses = await listKeyStatuses();
+  const [statuses, templates] = await Promise.all([
+    listKeyStatuses(),
+    listTemplates(),
+  ]);
   const byProvider = new Map(statuses.map((s) => [s.provider, s]));
 
   return (
@@ -32,9 +37,20 @@ export default async function SettingsPage() {
           );
         })}
         <p className="text-xs text-muted-foreground">
-          La génération de plan de contenu arrive en J7. Ajoute au moins une clé
-          (Claude recommandé) pour l&apos;activer.
+          Ajoute au moins une clé (Claude recommandé) pour activer la génération
+          de plan de contenu.
         </p>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-medium">Formats de release</h2>
+          <p className="text-sm text-muted-foreground">
+            Les fenêtres de promo (Sprint, Marathon, Impact…) et leurs jalons.
+            Chaque release fige le format choisi au moment de sa création.
+          </p>
+        </div>
+        <TemplateManager templates={templates} />
       </section>
     </div>
   );

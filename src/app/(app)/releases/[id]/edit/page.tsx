@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserOrRedirect } from "@/lib/auth";
+import { listTemplates } from "@/lib/templates";
 import { ReleaseForm } from "@/components/release-form";
 import { updateRelease } from "../../actions";
 
@@ -25,12 +26,15 @@ export default async function EditReleasePage({
   }
 
   // EP candidats comme parent, en excluant la release elle-même.
-  const { data: eps } = await supabase
-    .from("release")
-    .select("id, title")
-    .eq("type", "EP")
-    .neq("id", id)
-    .order("title", { ascending: true });
+  const [{ data: eps }, templates] = await Promise.all([
+    supabase
+      .from("release")
+      .select("id, title")
+      .eq("type", "EP")
+      .neq("id", id)
+      .order("title", { ascending: true }),
+    listTemplates(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -49,6 +53,7 @@ export default async function EditReleasePage({
       <ReleaseForm
         initial={release}
         parents={eps ?? []}
+        templates={templates}
         action={updateRelease.bind(null, id)}
         submitLabel="Enregistrer les modifications"
       />

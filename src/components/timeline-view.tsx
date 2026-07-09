@@ -1,8 +1,8 @@
 import {
-  buildTimeline,
+  buildTimelineFromMilestones,
   formatOffset,
+  type MilestoneDef,
   type MilestonePhase,
-  type WindowTemplate,
 } from "@/lib/domain/timeline";
 import { formatDateFr } from "@/lib/format";
 
@@ -13,13 +13,13 @@ const DOT: Record<MilestonePhase, string> = {
 };
 
 export function TimelineView({
-  template,
+  milestones,
   releaseDate,
 }: {
-  template: WindowTemplate;
+  milestones: MilestoneDef[];
   releaseDate: string;
 }) {
-  const timeline = buildTimeline(template, releaseDate);
+  const timeline = buildTimelineFromMilestones(milestones, releaseDate);
 
   return (
     <ol className="relative flex flex-col gap-1 border-l pl-6">
