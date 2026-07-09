@@ -408,7 +408,33 @@ Choix user après B1 validé en réel : **polish & déploiement V1** (pas B2 pul
 
 ---
 
-## Prochaine étape : déploiement Vercel (V1 en ligne), puis éventuellement B2 (pull)
+---
+
+## J14 — Polish visuel : toasts + états vides 🔬 CODE COMPLET (test navigateur côté user)
+**Date : 2026-07-09** · pas encore commité/pushé
+
+V1 en ligne sur https://release-engine-navy.vercel.app. Choix user : **toasts** + **raffinement des écrans** (pas dark mode ni landing pour l'instant).
+
+### Fait (toasts)
+- `Toaster` sonner monté dans le root layout (`position="top-center" richColors`), visible même au-dessus des modales (z-index élevé).
+- **`lib/use-action-toast.ts`** : hook générique qui émet un toast succès/erreur au changement d'état d'une action (`useActionState`), sans se déclencher au montage.
+- Branché sur : profil, clé API, génération plan, contenu (édition + regen), tournage, format de release, synchro Google, création release (erreur), quick-add Kanban. Messages inline redondants retirés (clé API, génération, synchro Google).
+
+### Fait (raffinement)
+- **`components/empty-state.tsx`** : état vide réutilisable (icône lucide + titre + sous-texte + action). Appliqué à la liste des releases (Music) et au dashboard (Rocket).
+- Icônes `Plus` sur les CTA « Nouvelle release » / « Créer une release ».
+
+### Vérifs passées
+- `npm run build` OK (16 routes, TS clean). Runtime : `/login` 200 (Toaster OK), 0 erreur.
+- Note : `lucide-react` en v1.x — icônes vérifiées avant usage (Music, Rocket, Plus).
+
+### Reste
+- Pusher (déclenche le redéploiement Vercel auto) après validation user.
+- Non retenus pour l'instant : dark mode, landing publique (dispo si besoin).
+
+---
+
+## Prochaine étape : pousser le polish (redeploy) ; puis éventuellement B2 (pull) / dark mode / landing
 - Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
 - Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
 - Envisager : activer « Confirm email » Auth, activer Leaked Password Protection (advisor J6).

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 import {
   createSourceBlock,
   updateSourceBlock,
@@ -93,6 +94,7 @@ function SourceBlockForm({
     action,
     {},
   );
+  useActionToast(state, "Tournage enregistré.");
 
   useEffect(() => {
     if (state.ok) onSuccess();

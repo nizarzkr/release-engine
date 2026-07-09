@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 import {
   syncGoogleNow,
   disconnectGoogle,
@@ -83,17 +84,12 @@ function SyncButton() {
     syncGoogleNow,
     {},
   );
+  useActionToast(state, (s) => s.message ?? "Synchronisé.");
   return (
     <form action={formAction} className="flex items-center gap-2">
       <Button type="submit" variant="outline" size="sm" disabled={pending}>
         {pending ? "Synchro…" : "Synchroniser maintenant"}
       </Button>
-      {state.message && (
-        <span className="text-xs text-emerald-600">{state.message}</span>
-      )}
-      {state.error && (
-        <span className="text-xs text-destructive">{state.error}</span>
-      )}
     </form>
   );
 }

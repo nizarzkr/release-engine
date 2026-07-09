@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 import { saveApiKey, deleteApiKey, type KeyState } from "@/app/(app)/settings/actions";
 import { AI_PROVIDERS, type AiProvider } from "@/lib/ai/config";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export function ApiKeyForm({
     saveApiKey.bind(null, provider),
     {},
   );
+  useActionToast(state, "Clé enregistrée (chiffrée).");
 
   // Réinitialise le champ après un enregistrement réussi.
   useEffect(() => {
@@ -85,11 +87,6 @@ export function ApiKeyForm({
           )}
         </div>
 
-        {state.ok && (
-          <p className="text-xs text-emerald-600 dark:text-emerald-400">
-            Clé enregistrée (chiffrée).
-          </p>
-        )}
         {state.error && <p className="text-xs text-destructive">{state.error}</p>}
       </CardContent>
     </Card>

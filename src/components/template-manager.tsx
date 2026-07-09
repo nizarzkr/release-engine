@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 import {
   createTemplate,
   updateTemplate,
@@ -155,6 +156,7 @@ function TemplateForm({
     action,
     {},
   );
+  useActionToast(state, "Format enregistré.");
   const [rows, setRows] = useState<MilestoneDef[]>(() => {
     const existing = coerceMilestones(initial?.milestones);
     return existing.length > 0 ? existing : [EMPTY_ROW];

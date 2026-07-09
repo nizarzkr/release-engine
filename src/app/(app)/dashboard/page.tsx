@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Rocket, Plus } from "lucide-react";
 import { getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { addDays } from "@/lib/domain/timeline";
@@ -9,6 +10,7 @@ import {
   type ChecklistPhase,
 } from "@/lib/domain/checklist";
 import { formatDateFr } from "@/lib/format";
+import { EmptyState } from "@/components/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -102,17 +104,18 @@ export default async function DashboardPage() {
           </p>
         </div>
         <Link href="/releases/new" className={buttonVariants()}>
+          <Plus className="h-4 w-4" />
           Créer une release
         </Link>
       </div>
 
       {overdue.length === 0 && upcoming.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Rien d&apos;urgent 🎉 — profite-en pour générer un plan ou planifier
-            un tournage.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Rocket}
+          title="Rien d'urgent 🎉"
+          description="Profite-en pour générer un plan de contenu ou planifier un tournage."
+          action={{ href: "/releases", label: "Voir mes releases" }}
+        />
       ) : (
         <div className="flex flex-col gap-6">
           {overdue.length > 0 && (

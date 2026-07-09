@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 import {
   updateContent,
   publishContent,
@@ -95,6 +96,7 @@ function EditForm({
     action,
     {},
   );
+  useActionToast(state, "Contenu enregistré.");
   useEffect(() => {
     if (state.ok) onSuccess();
   }, [state.ok, onSuccess]);
@@ -319,6 +321,7 @@ function RegenBlock({
     regenerateContentItem.bind(null, itemId, releaseId),
     {},
   );
+  useActionToast(state, "Contenu regénéré.");
 
   useEffect(() => {
     if (state.ok) onSuccess();

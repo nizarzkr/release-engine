@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 import type { ReleaseState } from "@/app/(app)/releases/actions";
 import Link from "next/link";
 import { RELEASE_TYPES, DSP_KEYS, DSP_LABELS } from "@/lib/domain/release";
@@ -38,6 +39,7 @@ export function ReleaseForm({
     action,
     {},
   );
+  useActionToast(state);
 
   const dsp = (initial?.dsp_links ?? {}) as Record<string, string>;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 import {
   generateContentPlan,
   type ContentPlanState,
@@ -18,6 +19,10 @@ export function GeneratePlanButton({
     generateContentPlan.bind(null, releaseId),
     {},
   );
+  useActionToast(
+    state,
+    (s) => `${s.count} contenus générés via ${s.provider}.`,
+  );
 
   return (
     <div className="flex flex-col items-start gap-1.5">
@@ -26,12 +31,6 @@ export function GeneratePlanButton({
           {pending ? "Génération… (~30 s)" : "✨ Générer le plan"}
         </Button>
       </form>
-      {state.ok && (
-        <p className="text-xs text-emerald-600 dark:text-emerald-400">
-          {state.count} contenus générés via {state.provider}.
-        </p>
-      )}
-      {state.error && <p className="text-xs text-destructive">{state.error}</p>}
     </div>
   );
 }

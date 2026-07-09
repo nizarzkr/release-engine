@@ -21,6 +21,7 @@ import { ContentCard, type BoardItem } from "@/components/content-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useActionState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 
 type Columns = Record<PipelineStatus, BoardItem[]>;
 
@@ -140,6 +141,7 @@ function QuickAdd({ releaseId }: { releaseId: string }) {
     createContent.bind(null, releaseId),
     {},
   );
+  useActionToast(state, "Contenu ajouté.");
 
   // Réinitialise le formulaire après un ajout réussi (state est un nouvel objet
   // à chaque soumission → on dépend de son identité).

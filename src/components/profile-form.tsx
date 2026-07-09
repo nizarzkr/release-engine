@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/lib/use-action-toast";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import {
   IMAGE_STANCES,
@@ -24,6 +25,7 @@ export function ProfileForm({
     saveProfile,
     {},
   );
+  useActionToast(state, "Profil enregistré.");
 
   const stance = initial?.image_stance ?? "HYBRIDE";
 

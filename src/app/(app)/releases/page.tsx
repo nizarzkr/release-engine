@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Music, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserOrRedirect } from "@/lib/auth";
 import { formatDateFr } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
 
 export default async function ReleasesPage() {
   await getUserOrRedirect();
@@ -24,24 +26,18 @@ export default async function ReleasesPage() {
           </p>
         </div>
         <Link href="/releases/new" className={buttonVariants()}>
+          <Plus className="h-4 w-4" />
           Nouvelle release
         </Link>
       </div>
 
       {!releases || releases.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-sm text-muted-foreground">
-              Aucune release pour l&apos;instant.
-            </p>
-            <Link
-              href="/releases/new"
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Créer ma première release
-            </Link>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Music}
+          title="Aucune release pour l'instant"
+          description="Crée ta première sortie pour générer sa timeline de promo et son plan de contenu."
+          action={{ href: "/releases/new", label: "Créer ma première release" }}
+        />
       ) : (
         <ul className="flex flex-col gap-3">
           {releases.map((r) => (
