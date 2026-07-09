@@ -384,7 +384,31 @@ Choix user : synchro **Google Calendar API 2 sens** (pas Apple), **agenda dédi�
 
 ---
 
-## Prochaine étape : tester B1 en réel, puis Bloc B2 (pull) / polish & déploiement (V1)
+---
+
+## J13 — Polish V1 + prep déploiement 🔬 CODE COMPLET (test navigateur + déploiement côté user)
+**Date : 2026-07-09** · pas encore commité
+
+Choix user après B1 validé en réel : **polish & déploiement V1** (pas B2 pull pour l'instant).
+
+### Fait (polish)
+- **App shell responsive** : `components/app-header.tsx` (client) — nav desktop inline + **menu mobile ☰** (dropdown), lien actif surligné (`usePathname`), nom d'artiste masqué sur mobile. `(app)/layout.tsx` allégé, paddings `px-4 sm:px-6`.
+- **Boundaries** : `(app)/error.tsx` (réessayer sans reload), `(app)/not-found.tsx` (capte les `notFound()` des releases), `(app)/loading.tsx` (squelette pulse), `global-error.tsx` (dernier recours, html/body inline).
+- **Viewport** explicite dans le root layout (mobile).
+
+### Fait (prep déploiement)
+- **`DEPLOY.md`** : runbook GitHub→Vercel (env vars, Site URL Supabase, redirect URI Google prod, ⚠️ maxDuration Hobby vs génération IA).
+- Contexte : `gh` authentifié (nizarzkr), pas de remote, pas de Vercel CLI.
+
+### Vérifs passées
+- `npm run build` OK (16 routes, TS clean).
+
+### Reste (côté user, cf. DEPLOY.md)
+- Créer le repo GitHub + importer dans Vercel + env vars + config Supabase/Google prod.
+
+---
+
+## Prochaine étape : déploiement Vercel (V1 en ligne), puis éventuellement B2 (pull)
 - Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
 - Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
 - Envisager : activer « Confirm email » Auth, activer Leaked Password Protection (advisor J6).
