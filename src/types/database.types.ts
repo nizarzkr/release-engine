@@ -239,7 +239,9 @@ export type Database = {
           created_at: string | null
           google_calendar_id: string | null
           google_email: string | null
+          last_pull_at: string | null
           refresh_token_enc: string
+          sync_token: string | null
           updated_at: string | null
           user_id: string
         }
@@ -247,7 +249,9 @@ export type Database = {
           created_at?: string | null
           google_calendar_id?: string | null
           google_email?: string | null
+          last_pull_at?: string | null
           refresh_token_enc: string
+          sync_token?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -255,7 +259,9 @@ export type Database = {
           created_at?: string | null
           google_calendar_id?: string | null
           google_email?: string | null
+          last_pull_at?: string | null
           refresh_token_enc?: string
+          sync_token?: string | null
           updated_at?: string | null
           user_id?: string
         }

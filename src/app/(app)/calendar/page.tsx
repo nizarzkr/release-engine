@@ -6,6 +6,7 @@ import {
   buildMonthGrid,
   type CalendarEvent,
 } from "@/lib/domain/calendar-month";
+import { autoPullIfStale } from "@/lib/google/sync";
 import { ReleaseCalendar } from "@/components/release-calendar";
 
 /** Borne le mois demandé (?y=&m=) sinon retombe sur le mois courant. */
@@ -35,6 +36,8 @@ export default async function CalendarPage({
   searchParams: Promise<{ y?: string | string[]; m?: string | string[] }>;
 }) {
   await getUserOrRedirect();
+  // Tire les éventuelles modifs faites dans Google (throttlé) avant d'afficher.
+  await autoPullIfStale();
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
   const { y, m } = await searchParams;

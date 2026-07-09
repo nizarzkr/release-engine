@@ -45,9 +45,11 @@ export function GoogleCalendarCard({
         ) : status.connected ? (
           <>
             <p className="text-muted-foreground">
-              Connecté{status.email ? ` · ${status.email}` : ""}. Tes sorties,
-              jalons, contenus et tâches sont poussés vers un agenda dédié{" "}
-              <strong>Release Engine</strong>.
+              Connecté{status.email ? ` · ${status.email}` : ""}. Synchro{" "}
+              <strong>2 sens</strong> avec l&apos;agenda dédié{" "}
+              <strong>Release Engine</strong> : l&apos;app pousse tes sorties,
+              jalons, contenus et tâches, et tes déplacements de date dans Google
+              reviennent dans l&apos;app.
             </p>
             <div className="flex items-center gap-2">
               <SyncButton />

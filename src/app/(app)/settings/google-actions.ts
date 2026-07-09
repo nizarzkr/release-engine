@@ -7,7 +7,7 @@ import { decryptSecret } from "@/lib/crypto";
 import { getConnectionRow } from "@/lib/google/connection";
 import { getAccessToken } from "@/lib/google/oauth";
 import { deleteCalendar } from "@/lib/google/calendar";
-import { reconcileGoogleCalendar } from "@/lib/google/sync";
+import { twoWaySync } from "@/lib/google/sync";
 
 export type GoogleSyncState = { ok?: boolean; message?: string; error?: string };
 
@@ -17,13 +17,16 @@ export async function syncGoogleNow(
   _formData: FormData,
 ): Promise<GoogleSyncState> {
   await getUserOrRedirect();
-  const result = await reconcileGoogleCalendar();
+  const result = await twoWaySync();
 
   if (result.ok) {
     revalidatePath("/settings");
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    const pulled = result.pulled ?? 0;
     return {
       ok: true,
-      message: `Synchronisé : ${result.inserted} ajout(s), ${result.updated} mise(s) à jour, ${result.deleted} suppression(s).`,
+      message: `Synchronisé : ${pulled} depuis Google, ${result.inserted} ajout(s), ${result.updated} màj, ${result.deleted} suppression(s).`,
     };
   }
   if (result.reason === "not_connected") {

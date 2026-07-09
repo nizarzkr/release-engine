@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { decryptSecret } from "@/lib/crypto";
-import { addDays } from "@/lib/domain/timeline";
+import { addDays, daysBetween } from "@/lib/domain/timeline";
 import { cardTitle } from "@/lib/domain/content";
 import { coerceMilestones } from "@/lib/domain/release-template";
 import { getConnectionRow } from "./connection";
@@ -11,6 +11,7 @@ import {
   createDedicatedCalendar,
   deleteEvent,
   insertEvent,
+  listChangedEvents,
   updateEvent,
   type AllDayEvent,
 } from "./calendar";
@@ -140,6 +141,168 @@ export async function syncGoogleBestEffort(): Promise<void> {
   } catch {
     // best-effort : la synchro ne doit jamais casser l'action principale.
   }
+}
+
+export type PullResult =
+  | { ok: true; applied: number; baseline: boolean }
+  | { ok: false; reason: "skip" };
+
+/**
+ * Tire les changements faits dans Google vers la base (sync incrémental).
+ * Déplacements de date → mis à jour dans l'app ; events supprimés dans Google →
+ * mapping retiré (le push les recrée : l'app reste source de vérité pour
+ * l'existence). Premier passage / token périmé = simple établissement du token.
+ */
+export async function pullGoogleChanges(): Promise<PullResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, reason: "skip" };
+
+  const conn = await getConnectionRow(supabase);
+  if (!conn || !conn.google_calendar_id) return { ok: false, reason: "skip" };
+
+  const accessToken = await getAccessToken(decryptSecret(conn.refresh_token_enc));
+
+  let result = await listChangedEvents(
+    accessToken,
+    conn.google_calendar_id,
+    conn.sync_token,
+  );
+  // Token périmé → repartir d'une base propre (sans appliquer de changement).
+  if (result.expired) {
+    result = await listChangedEvents(accessToken, conn.google_calendar_id, null);
+  }
+  if (result.expired) return { ok: false, reason: "skip" };
+
+  const baseline = !conn.sync_token;
+  let applied = 0;
+
+  if (!baseline) {
+    const { data: mappings } = await supabase
+      .from("google_calendar_event")
+      .select("*");
+    const byEventId = new Map(
+      (mappings ?? []).map((m) => [m.google_event_id, m]),
+    );
+
+    for (const change of result.changes) {
+      const mapping = byEventId.get(change.id);
+      if (!mapping) continue; // event non suivi (créé à la main dans Google)
+
+      if (change.cancelled) {
+        // Suppression côté Google : on retire le mapping, le push recréera.
+        await supabase
+          .from("google_calendar_event")
+          .delete()
+          .eq("id", mapping.id);
+        applied++;
+      } else if (change.date) {
+        const changed = await applyDateChange(
+          supabase,
+          mapping.source_kind as SourceKind,
+          mapping.source_id,
+          change.date,
+        );
+        if (changed) applied++;
+      }
+    }
+  }
+
+  await supabase
+    .from("google_calendar_connection")
+    .update({
+      sync_token: result.nextSyncToken,
+      last_pull_at: new Date().toISOString(),
+    })
+    .eq("user_id", user.id);
+
+  return { ok: true, applied, baseline };
+}
+
+/** Pull seulement si le dernier remonte à plus de `staleMs` (défaut 60 s). */
+export async function autoPullIfStale(staleMs = 60_000): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const conn = await getConnectionRow(supabase);
+    if (!conn || !conn.google_calendar_id) return;
+    if (
+      conn.last_pull_at &&
+      Date.now() - new Date(conn.last_pull_at).getTime() < staleMs
+    ) {
+      return;
+    }
+    await pullGoogleChanges();
+  } catch {
+    // best-effort
+  }
+}
+
+/** Synchro complète 2 sens : pull (Google → app) puis push (app → Google). */
+export async function twoWaySync(): Promise<
+  SyncResult & { pulled?: number }
+> {
+  let pulled = 0;
+  try {
+    const p = await pullGoogleChanges();
+    if (p.ok) pulled = p.applied;
+  } catch {
+    // le pull ne doit pas empêcher le push
+  }
+  const pushed = await reconcileGoogleCalendar();
+  return { ...pushed, pulled };
+}
+
+/** Applique un déplacement de date Google à l'élément local correspondant. */
+async function applyDateChange(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  kind: SourceKind,
+  sourceId: string,
+  date: string,
+): Promise<boolean> {
+  if (kind === "CONTENT") {
+    const { error } = await supabase
+      .from("content_item")
+      .update({ scheduled_date: date })
+      .eq("id", sourceId);
+    return !error;
+  }
+  if (kind === "CHECKLIST") {
+    const { error } = await supabase
+      .from("checklist_item")
+      .update({ due_date: date })
+      .eq("id", sourceId);
+    return !error;
+  }
+  // MILESTONE : sourceId = `${releaseId}:${milestoneKey}` → recale l'offset.
+  const sep = sourceId.lastIndexOf(":");
+  if (sep < 0) return false;
+  const releaseId = sourceId.slice(0, sep);
+  const milestoneKey = sourceId.slice(sep + 1);
+
+  const { data: release } = await supabase
+    .from("release")
+    .select("release_date, milestones")
+    .eq("id", releaseId)
+    .maybeSingle();
+  if (!release) return false;
+
+  const milestones = coerceMilestones(release.milestones);
+  const target = milestones.find((m) => m.key === milestoneKey);
+  if (!target) return false;
+
+  const newOffset = daysBetween(release.release_date, date);
+  if (newOffset === target.offset) return false;
+
+  const updated = milestones.map((m) =>
+    m.key === milestoneKey ? { ...m, offset: newOffset } : m,
+  );
+  const { error } = await supabase
+    .from("release")
+    .update({ milestones: updated })
+    .eq("id", releaseId);
+  return !error;
 }
 
 /** Construit l'ensemble des events attendus depuis la base. */

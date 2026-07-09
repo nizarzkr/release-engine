@@ -434,7 +434,35 @@ V1 en ligne sur https://release-engine-navy.vercel.app. Choix user : **toasts** 
 
 ---
 
-## Prochaine étape : pousser le polish (redeploy) ; puis éventuellement B2 (pull) / dark mode / landing
+## J15 — Bloc B2 : pull Google Calendar (synchro 2 sens) 🔬 CODE COMPLET (test user : éditer dans Google)
+**Date : 2026-07-09** · pas encore commité/pushé
+
+### Décisions
+- **Déplacements de date** Google → app (contenu `scheduled_date`, checklist `due_date`, jalon = recalcul de l'offset via `daysBetween`).
+- **Suppressions dans Google** : l'**app reste source de vérité pour l'existence** → mapping retiré, le push recrée l'event (aucune perte de données). Inversable si besoin.
+- Détection par **`syncToken`** (sync incrémental Google). 1er passage / token 410 = simple établissement du token (rien appliqué).
+
+### Fait
+- **Migration `0007`** (appliquée) : `google_calendar_connection.sync_token` + `last_pull_at`. Types édités à la main (2 colonnes).
+- **`calendar.ts`** : `listChangedEvents` (pagination + `showDeleted` + `nextSyncToken`, renvoie `expired` sur 410).
+- **`sync.ts`** : `pullGoogleChanges` (applique moves, retire mappings des events annulés, mémorise token+last_pull_at), `autoPullIfStale` (throttle 60 s), `twoWaySync` (**pull puis push** — pull d'abord pour que Google ne soit pas écrasé), `applyDateChange` (CONTENT/CHECKLIST/MILESTONE).
+- **Branchements** : bouton « Synchroniser » → `twoWaySync` (message inclut le nb tiré de Google) ; **calendrier auto-pull** (throttlé) à l'ouverture ; carte Réglages décrit la synchro 2 sens.
+
+### Vérifs passées
+- `npm run build` OK (16 routes, TS clean). Runtime : `/calendar` `/settings` compilent, 0 erreur.
+
+### À tester côté user (nécessite d'éditer dans Google Agenda)
+1. Réglages → **Synchroniser** (établit le token de base + push).
+2. Dans Google Agenda, **déplacer** un event (contenu/tâche/jalon) d'un jour.
+3. App → ouvrir **Calendrier** (auto-pull) ou **Synchroniser** → la date doit être mise à jour dans l'app.
+4. Supprimer un event dans Google → il **réapparaît** à la synchro suivante (app authoritative).
+
+### Reste
+- Pusher (redeploy). Push notifications Google (watch channels) = amélioration future (pull vraiment temps réel sans throttle/ouverture de page).
+
+---
+
+## Prochaine étape : pousser polish + B2 (redeploy) ; puis éventuellement dark mode / landing / watch channels
 - Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
 - Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
 - Envisager : activer « Confirm email » Auth, activer Leaked Password Protection (advisor J6).
