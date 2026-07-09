@@ -13,6 +13,7 @@ import {
 } from "@/lib/ai/config";
 import { buildTimelineFromMilestones, addDays } from "@/lib/domain/timeline";
 import { coerceMilestones } from "@/lib/domain/release-template";
+import { syncGoogleBestEffort } from "@/lib/google/sync";
 import {
   ContentPlanSchema,
   RegeneratedItemSchema,
@@ -129,6 +130,7 @@ export async function generateContentPlan(
     return { error: error.message };
   }
 
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}/board`);
   return { ok: true, count: rows.length, provider: AI_PROVIDERS[provider].label };
 }
@@ -198,6 +200,7 @@ export async function regenerateContentItem(
     .eq("id", itemId);
   if (error) return { error: error.message };
 
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}/board`);
   return { ok: true };
 }

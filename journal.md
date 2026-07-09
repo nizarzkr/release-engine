@@ -352,7 +352,39 @@ Suite au mega test, 2 retours utilisateur. Découpage en 3 blocs : **A** (calend
 
 ---
 
-## Prochaine étape : Bloc B (Google Calendar 2 sens) puis J-polish & déploiement (V1)
+---
+
+## J12 — Bloc B1 : synchro Google Calendar (push) 🔬 CODE COMPLET (test user : nécessite setup Google Cloud + connexion)
+**Date : 2026-07-09** · pas encore commité
+
+Choix user : synchro **Google Calendar API 2 sens** (pas Apple), **agenda dédié** créé par l'app, **tout** synchronisé (jalons dont jour de sortie + contenus + checklist), **push d'abord** (B1) puis pull (B2) plus tard. App en localhost.
+
+### Fait (B1 = push app → Google)
+- **Migration `0006_google_calendar`** (appliquée, advisors 0 alerte) : `google_calendar_connection` (refresh token **chiffré** via crypto.ts, `google_calendar_id`, `google_email`) + `google_calendar_event` (mapping item local → event Google, `content_hash`, unique(user,kind,source_id)). RLS 4 policies chacune. Types régénérés.
+- **`lib/google/oauth.ts`** (fetch brut, 0 dépendance) : `buildAuthUrl`, `exchangeCode` (→ refresh token + email via userinfo), `getAccessToken` (refresh), `googleConfigured`. Scope `openid email calendar`.
+- **`lib/google/calendar.ts`** : REST v3 — create/exists/delete **agenda**, insert/update/delete **event** (journée entière, end.date exclusif +1j, 404/410 tolérés).
+- **`lib/google/connection.ts`** : `getConnectionRow`, `getConnectionStatus` (UI).
+- **`lib/google/sync.ts`** : `reconcileGoogleCalendar` (idempotent : crée l'agenda si absent/supprimé, diff desired vs mapping via `content_hash` → insert/update/delete) + `syncGoogleBestEffort` (ne lève jamais). Events : 🎵/📣 jalons · titre, 🎬 contenus (cardTitle), ✅ checklist.
+- **Routes** : `/auth/google/connect` (state anti-CSRF en cookie httpOnly → consentement) + `/auth/google/callback` (vérif state, échange, upsert connexion chiffrée, 1re synchro).
+- **Réglages** : `google-actions.ts` (`syncGoogleNow`, `disconnectGoogle` = supprime agenda + mapping + connexion) + `google-calendar-card.tsx` (connecter / statut+email / synchro manuelle / déconnecter) + flash `?google=…`.
+- **Auto-sync** branché sur les mutations qui changent un event : release create/update/delete, content update/publish/delete, generate/regenerate, checklist seed/add/toggle/delete. (Pas `moveContent` : le DnD ne change ni date ni titre → no-op.)
+- **`.env.example`** : `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` + URI de redirection documentée.
+
+### Vérifs passées
+- `npm run build` OK (16 routes, dont les 2 routes Google, TS clean). Runtime : routes compilent, 0 erreur. Advisors sécurité : 0 alerte sur les nouvelles tables.
+
+### Prérequis user avant test (localhost)
+1. Google Cloud : projet + Google Calendar API activée + écran consentement (External, test user = nizarmgmt@gmail.com) + ID client OAuth Web, redirect `http://localhost:3000/auth/google/callback`.
+2. `.env.local` : `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` → **relancer le serveur dev**.
+3. Réglages → Google Agenda → Connecter → autoriser → l'agenda « Release Engine » se crée et se peuple.
+
+### Reste (B2, plus tard)
+- Pull : les modifs faites dans Google reviennent dans l'app (sync token + réconciliation). À lancer après validation de B1 en usage réel.
+- ⚠️ Mode *testing* Google : refresh token ~7 j → reconnexion. À vérifier au déploiement (redirect URIs prod).
+
+---
+
+## Prochaine étape : tester B1 en réel, puis Bloc B2 (pull) / polish & déploiement (V1)
 - Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
 - Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
 - Envisager : activer « Confirm email » Auth, activer Leaked Password Protection (advisor J6).

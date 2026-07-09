@@ -7,6 +7,7 @@ import {
   checklistRowsForRelease,
   CHECKLIST_PHASES,
 } from "@/lib/domain/checklist";
+import { syncGoogleBestEffort } from "@/lib/google/sync";
 
 export async function seedChecklist(releaseId: string) {
   const user = await getUserOrRedirect();
@@ -26,6 +27,7 @@ export async function seedChecklist(releaseId: string) {
   }));
 
   await supabase.from("checklist_item").insert(rows);
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}`);
 }
 
@@ -50,6 +52,7 @@ export async function addChecklistItem(releaseId: string, formData: FormData) {
     phase,
     due_date,
   });
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}`);
 }
 
@@ -61,6 +64,7 @@ export async function toggleChecklistItem(
   await getUserOrRedirect();
   const supabase = await createClient();
   await supabase.from("checklist_item").update({ is_done: isDone }).eq("id", id);
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}`);
 }
 
@@ -68,5 +72,6 @@ export async function deleteChecklistItem(id: string, releaseId: string) {
   await getUserOrRedirect();
   const supabase = await createClient();
   await supabase.from("checklist_item").delete().eq("id", id);
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}`);
 }

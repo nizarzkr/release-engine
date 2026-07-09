@@ -2,16 +2,37 @@ import { getUserOrRedirect } from "@/lib/auth";
 import { listKeyStatuses } from "@/lib/ai/keys";
 import { AI_PROVIDER_ORDER } from "@/lib/ai/config";
 import { listTemplates } from "@/lib/templates";
+import { getConnectionStatus } from "@/lib/google/connection";
 import { ApiKeyForm } from "@/components/api-key-form";
 import { TemplateManager } from "@/components/template-manager";
+import { GoogleCalendarCard } from "@/components/google-calendar-card";
 
-export default async function SettingsPage() {
+const GOOGLE_FLASH: Record<string, { tone: "ok" | "error"; message: string }> = {
+  connected: { tone: "ok", message: "Google Agenda connecté et synchronisé." },
+  denied: { tone: "error", message: "Connexion Google refusée." },
+  error: { tone: "error", message: "Échec de la connexion Google. Réessaie." },
+  notconfigured: {
+    tone: "error",
+    message: "Identifiants OAuth Google absents côté serveur.",
+  },
+};
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ google?: string | string[] }>;
+}) {
   await getUserOrRedirect();
-  const [statuses, templates] = await Promise.all([
+  const [statuses, templates, googleStatus] = await Promise.all([
     listKeyStatuses(),
     listTemplates(),
+    getConnectionStatus(),
   ]);
   const byProvider = new Map(statuses.map((s) => [s.provider, s]));
+
+  const { google } = await searchParams;
+  const googleKey = Array.isArray(google) ? google[0] : google;
+  const googleFlash = googleKey ? GOOGLE_FLASH[googleKey] : undefined;
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -51,6 +72,17 @@ export default async function SettingsPage() {
           </p>
         </div>
         <TemplateManager templates={templates} />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-lg font-medium">Synchronisation calendrier</h2>
+          <p className="text-sm text-muted-foreground">
+            Pousse ton planning vers Google Agenda (agenda dédié, mise à jour
+            automatique).
+          </p>
+        </div>
+        <GoogleCalendarCard status={googleStatus} flash={googleFlash} />
       </section>
     </div>
   );

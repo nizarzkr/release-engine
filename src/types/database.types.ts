@@ -234,6 +234,66 @@ export type Database = {
         }
         Relationships: []
       }
+      google_calendar_connection: {
+        Row: {
+          created_at: string | null
+          google_calendar_id: string | null
+          google_email: string | null
+          refresh_token_enc: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          google_calendar_id?: string | null
+          google_email?: string | null
+          refresh_token_enc: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          google_calendar_id?: string | null
+          google_email?: string | null
+          refresh_token_enc?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      google_calendar_event: {
+        Row: {
+          content_hash: string | null
+          created_at: string | null
+          google_event_id: string
+          id: string
+          source_id: string
+          source_kind: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content_hash?: string | null
+          created_at?: string | null
+          google_event_id: string
+          id?: string
+          source_id: string
+          source_kind: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content_hash?: string | null
+          created_at?: string | null
+          google_event_id?: string
+          id?: string
+          source_id?: string
+          source_kind?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       release: {
         Row: {
           bpm: number | null

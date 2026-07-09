@@ -11,6 +11,7 @@ import {
   parseOptionalText,
 } from "@/lib/domain/release";
 import { coerceMilestones } from "@/lib/domain/release-template";
+import { syncGoogleBestEffort } from "@/lib/google/sync";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 
@@ -79,6 +80,7 @@ export async function createRelease(
     return { error: error?.message ?? "Création impossible." };
   }
 
+  await syncGoogleBestEffort();
   revalidatePath("/releases");
   redirect(`/releases/${data.id}`);
 }
@@ -104,6 +106,7 @@ export async function updateRelease(
     return { error: error.message };
   }
 
+  await syncGoogleBestEffort();
   revalidatePath("/releases");
   revalidatePath(`/releases/${id}`);
   redirect(`/releases/${id}`);
@@ -113,6 +116,7 @@ export async function deleteRelease(id: string) {
   await getUserOrRedirect();
   const supabase = await createClient();
   await supabase.from("release").delete().eq("id", id);
+  await syncGoogleBestEffort();
   revalidatePath("/releases");
   redirect("/releases");
 }

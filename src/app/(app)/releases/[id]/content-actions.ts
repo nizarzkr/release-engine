@@ -11,6 +11,7 @@ import {
   EMPTY_BRIEF,
   type PipelineStatus,
 } from "@/lib/domain/content";
+import { syncGoogleBestEffort } from "@/lib/google/sync";
 
 export type ContentState = { ok?: boolean; error?: string };
 
@@ -87,6 +88,7 @@ export async function updateContent(
     .eq("id", id);
   if (error) return { error: error.message };
 
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}/board`);
   return { ok: true };
 }
@@ -113,6 +115,7 @@ export async function publishContent(id: string, releaseId: string) {
     .from("content_item")
     .update({ is_published: true })
     .eq("id", id);
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}/board`);
 }
 
@@ -120,5 +123,6 @@ export async function deleteContent(id: string, releaseId: string) {
   await getUserOrRedirect();
   const supabase = await createClient();
   await supabase.from("content_item").delete().eq("id", id);
+  await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}/board`);
 }
