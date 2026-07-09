@@ -301,6 +301,28 @@ L'utilisateur veut tester J2→J8 en conditions réelles (navigateur + clé Clau
 
 ---
 
-## Prochaine étape : J10 — Dashboard & Calendrier multi-release
-- Dashboard « quoi faire cette semaine » (cross-release) : content_items à tourner/monter/publier + checklist_items à échéance proche.
-- Calendrier multi-release **lecture seule** : toutes les releases actives + leurs fenêtres, pour anticiper les chevauchements de promo.
+---
+
+## J10 — Dashboard & Calendrier multi-release ✅ CODE COMPLET (sans dépendance IA)
+**Date : 2026-07-09** · commit `70df573`
+
+### Décisions
+- Dashboard : **horizon 14 jours glissants + retards**. Calendrier : **timeline horizontale / Gantt** (lecture seule).
+
+### Fait
+- **`timeline.ts`** : `daysBetween` (UTC). **`calendar.ts`** : `buildCalendarModel` (PUR) → barres (`leftPct/widthPct`), `markerPct` (jour de sortie), `todayPct`, ticks de mois. **12 tests OK** (dont chevauchement).
+- **`dashboard/page.tsx`** (réécrit) : « quoi faire » cross-release — `content_item` (non publiés, `scheduled_date <= J+14`) + `checklist_item` (non faits, `due_date <= J+14`), split **En retard** / **À venir**, liens vers board/release, état vide.
+- **`calendar/page.tsx`** + **`release-calendar.tsx`** : Gantt de toutes les releases, chevauchements visibles, marqueur sortie + ligne « aujourd'hui », `overflow-x-auto`. Lien nav **Calendrier**.
+
+### Vérifs passées
+- 12/12 tests (`daysBetween` + `buildCalendarModel`). `npm run build` OK (routes `/calendar`, `/dashboard`). Modules **sans dépendance IA**.
+
+### À tester côté user
+- Dashboard : items ≤ 14 j + retards, triés, liens OK. Calendrier : barres de fenêtres, chevauchement visible dès 2 releases, ligne aujourd'hui.
+
+---
+
+## Prochaine étape : J11 — Polish & déploiement (V1)
+- Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
+- Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
+- Envisager : activer « Confirm email » Auth, activer Leaked Password Protection (advisor J6).
