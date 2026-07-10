@@ -8,7 +8,7 @@ import {
   type SourceBlockType,
 } from "@/lib/domain/source-block";
 import { formatDateFr } from "@/lib/format";
-import { KanbanBoard } from "@/components/kanban-board";
+import { BoardView } from "@/components/board-view";
 import { GeneratePlanButton } from "@/components/generate-plan-button";
 import { buttonVariants } from "@/components/ui/button";
 import { listKeyStatuses } from "@/lib/ai/keys";
@@ -102,7 +102,7 @@ export default async function BoardPage({
           >
             ← {release.title}
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight">Pipeline</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Pipeline</h1>
         </div>
         <div className="flex flex-col items-end gap-2">
           {canGenerate ? (
@@ -124,7 +124,7 @@ export default async function BoardPage({
       </div>
 
       {isEmpty && (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center shadow-sm">
           <p className="text-sm text-muted-foreground">
             Pipeline vide. Génère un plan de contenu par IA, ou ajoute des cartes
             à la main dans le Backlog.
@@ -139,7 +139,7 @@ export default async function BoardPage({
         </div>
       )}
 
-      <KanbanBoard releaseId={id} items={items} sourceBlocks={sourceOptions} />
+      <BoardView releaseId={id} items={items} sourceBlocks={sourceOptions} />
     </div>
   );
 }

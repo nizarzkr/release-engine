@@ -49,6 +49,7 @@ export async function createContent(
   if (error) return { error: error.message };
 
   revalidatePath(`/releases/${releaseId}/board`);
+  revalidatePath("/studio");
   return { ok: true };
 }
 
@@ -90,6 +91,7 @@ export async function updateContent(
 
   await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}/board`);
+  revalidatePath("/studio");
   return { ok: true };
 }
 
@@ -106,6 +108,7 @@ export async function moveContent(
     .update({ pipeline_status: status })
     .eq("id", id);
   revalidatePath(`/releases/${releaseId}/board`);
+  revalidatePath("/studio");
 }
 
 export async function publishContent(id: string, releaseId: string) {
@@ -117,6 +120,7 @@ export async function publishContent(id: string, releaseId: string) {
     .eq("id", id);
   await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}/board`);
+  revalidatePath("/studio");
 }
 
 export async function deleteContent(id: string, releaseId: string) {
@@ -125,4 +129,5 @@ export async function deleteContent(id: string, releaseId: string) {
   await supabase.from("content_item").delete().eq("id", id);
   await syncGoogleBestEffort();
   revalidatePath(`/releases/${releaseId}/board`);
+  revalidatePath("/studio");
 }

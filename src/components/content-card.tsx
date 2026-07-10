@@ -1,3 +1,4 @@
+import { CalendarDays, Clapperboard, Disc3 } from "lucide-react";
 import type { Tables } from "@/types/database.types";
 import type { AutoTag, AutoTagTone } from "@/lib/domain/content-tags";
 import { cardTitle, FORMAT_LABELS, type ContentFormat } from "@/lib/domain/content";
@@ -7,23 +8,23 @@ import { ContentDialog } from "@/components/content-dialog";
 export type BoardItem = Tables<"content_item"> & {
   autoTags: AutoTag[];
   sourceBlockLabel: string | null;
+  // Renseigné uniquement sur le board global (Studio) pour situer la release.
+  releaseTitle?: string | null;
 };
 
+// Tons doux alignés sur le thème crème (ambre / bleu ardoise / rose).
 const TONE_CLASS: Record<AutoTagTone, string> = {
-  warning:
-    "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  info: "bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300",
-  danger: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300",
+  warning: "bg-[#f6eedc] text-[#9a6d1e]",
+  info: "bg-[#e9eff7] text-[#345c93]",
+  danger: "bg-[#f7e8e6] text-[#a8433d]",
 };
 
 export function ContentCard({
   item,
-  releaseId,
   sourceBlocks,
   dragging,
 }: {
   item: BoardItem;
-  releaseId: string;
   sourceBlocks: { id: string; label: string }[];
   dragging?: boolean;
 }) {
@@ -31,15 +32,21 @@ export function ContentCard({
 
   return (
     <div
-      className={`rounded-lg border bg-card p-3 shadow-sm ${
-        dragging ? "ring-2 ring-ring" : ""
+      className={`rounded-xl border bg-card p-3 shadow-sm transition-shadow ${
+        dragging ? "ring-2 ring-primary/40 shadow-md" : ""
       }`}
     >
+      {item.releaseTitle && (
+        <div className="mb-1.5 inline-flex max-w-full items-center gap-1 truncate rounded-md bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground ring-1 ring-border">
+          <Disc3 className="h-3 w-3 shrink-0" />
+          <span className="truncate">{item.releaseTitle}</span>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium leading-snug">{cardTitle(item)}</p>
         <ContentDialog
           item={item}
-          releaseId={releaseId}
+          releaseId={item.release_id}
           sourceBlocks={sourceBlocks}
         />
       </div>
@@ -53,11 +60,19 @@ export function ContentCard({
       </div>
 
       {(item.scheduled_date || item.sourceBlockLabel) && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2.5 text-xs text-muted-foreground">
           {item.scheduled_date && (
-            <span>📅 {formatDateFr(item.scheduled_date)}</span>
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays className="h-3 w-3" />
+              {formatDateFr(item.scheduled_date)}
+            </span>
           )}
-          {item.sourceBlockLabel && <span>🎬 {item.sourceBlockLabel}</span>}
+          {item.sourceBlockLabel && (
+            <span className="inline-flex items-center gap-1">
+              <Clapperboard className="h-3 w-3" />
+              {item.sourceBlockLabel}
+            </span>
+          )}
         </div>
       )}
 

@@ -25,6 +25,14 @@ import { useActionToast } from "@/lib/use-action-toast";
 
 type Columns = Record<PipelineStatus, BoardItem[]>;
 
+// Pastille de couleur par étape du pipeline.
+const STATUS_DOT: Record<PipelineStatus, string> = {
+  BACKLOG: "#B0AB9F",
+  A_TOURNER: "#C08A2E",
+  A_MONTER: "#3E6DAE",
+  READY: "#1E8A5F",
+};
+
 function group(items: BoardItem[]): Columns {
   const g: Columns = { BACKLOG: [], A_TOURNER: [], A_MONTER: [], READY: [] };
   for (const it of items) {
@@ -38,10 +46,12 @@ export function KanbanBoard({
   releaseId,
   items,
   sourceBlocks,
+  enableQuickAdd = true,
 }: {
-  releaseId: string;
+  releaseId?: string;
   items: BoardItem[];
   sourceBlocks: { id: string; label: string }[];
+  enableQuickAdd?: boolean;
 }) {
   const [columns, setColumns] = useState<Columns>(() => group(items));
   const [, startTransition] = useTransition();
@@ -63,6 +73,9 @@ export function KanbanBoard({
 
     const from = source.droppableId as PipelineStatus;
     const to = destination.droppableId as PipelineStatus;
+    // release_id de la carte déplacée (chaque carte peut venir d'une release
+    // différente sur le board global Studio).
+    const movedReleaseId = columns[from][source.index]?.release_id;
 
     setColumns((prev) => {
       const next: Columns = {
@@ -76,9 +89,9 @@ export function KanbanBoard({
       return next;
     });
 
-    if (from !== to) {
+    if (from !== to && movedReleaseId) {
       startTransition(() => {
-        moveContent(draggableId, releaseId, to);
+        moveContent(draggableId, movedReleaseId, to);
       });
     }
   }
@@ -92,20 +105,28 @@ export function KanbanBoard({
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className={`flex min-h-40 flex-col gap-2 rounded-lg border p-2 transition-colors ${
-                  snapshot.isDraggingOver ? "bg-muted/60" : "bg-muted/20"
+                className={`flex min-h-40 flex-col gap-2 rounded-xl border p-2.5 transition-colors ${
+                  snapshot.isDraggingOver
+                    ? "border-primary/30 bg-primary/5"
+                    : "bg-secondary"
                 }`}
               >
                 <div className="flex items-center justify-between px-1 py-1">
-                  <span className="text-sm font-medium">
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ background: STATUS_DOT[status] }}
+                    />
                     {PIPELINE_LABELS[status]}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="rounded-full border bg-card px-1.5 py-px text-xs font-medium text-muted-foreground">
                     {columns[status].length}
                   </span>
                 </div>
 
-                {status === "BACKLOG" && <QuickAdd releaseId={releaseId} />}
+                {enableQuickAdd && releaseId && status === "BACKLOG" && (
+                  <QuickAdd releaseId={releaseId} />
+                )}
 
                 {columns[status].map((item, index) => (
                   <Draggable draggableId={item.id} index={index} key={item.id}>
@@ -117,7 +138,6 @@ export function KanbanBoard({
                       >
                         <ContentCard
                           item={item}
-                          releaseId={releaseId}
                           sourceBlocks={sourceBlocks}
                           dragging={ds.isDragging}
                         />

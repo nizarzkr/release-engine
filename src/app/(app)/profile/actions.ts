@@ -41,6 +41,6 @@ export async function saveProfile(
   }
 
   revalidatePath("/dashboard");
-  revalidatePath("/profile");
+  revalidatePath("/settings");
   redirect("/dashboard");
 }

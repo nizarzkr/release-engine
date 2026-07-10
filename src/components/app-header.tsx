@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/releases", label: "Releases" },
+  { href: "/studio", label: "Studio" },
   { href: "/calendar", label: "Calendrier" },
-  { href: "/profile", label: "Profil" },
   { href: "/settings", label: "Réglages" },
 ];
 

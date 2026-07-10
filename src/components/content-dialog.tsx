@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useActionToast } from "@/lib/use-action-toast";
 import {
   updateContent,
@@ -44,10 +51,16 @@ export function ContentDialog({
   item,
   releaseId,
   sourceBlocks,
+  triggerRender,
+  triggerChildren,
 }: {
   item: Tables<"content_item">;
   releaseId: string;
   sourceBlocks: SourceOption[];
+  // Déclencheur personnalisable : par défaut un bouton « Éditer » (kanban),
+  // ou une ligne entière (vue Liste).
+  triggerRender?: ReactElement;
+  triggerChildren?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [openCount, setOpenCount] = useState(0);
@@ -61,8 +74,8 @@ export function ContentDialog({
         if (next) setOpenCount((c) => c + 1);
       }}
     >
-      <DialogTrigger render={<Button variant="ghost" size="xs" />}>
-        Éditer
+      <DialogTrigger render={triggerRender ?? <Button variant="ghost" size="xs" />}>
+        {triggerChildren ?? "Éditer"}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>

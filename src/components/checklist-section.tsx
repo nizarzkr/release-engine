@@ -10,8 +10,10 @@ import {
   toggleChecklistItem,
   deleteChecklistItem,
 } from "@/app/(app)/releases/[id]/checklist-actions";
+import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 const selectClass =
   "h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
@@ -83,10 +85,15 @@ export async function ChecklistSection({
                       >
                         <button
                           type="submit"
-                          className="text-lg leading-none"
                           aria-label={item.is_done ? "Décocher" : "Cocher"}
+                          className={cn(
+                            "flex h-[19px] w-[19px] items-center justify-center rounded-[6px] border-2 transition-colors",
+                            item.is_done
+                              ? "border-primary bg-primary text-white"
+                              : "border-input text-transparent hover:border-primary",
+                          )}
                         >
-                          {item.is_done ? "☑" : "☐"}
+                          <Check className="h-3 w-3" strokeWidth={3} />
                         </button>
                       </form>
                       <span
@@ -113,10 +120,10 @@ export async function ChecklistSection({
                       >
                         <button
                           type="submit"
-                          className="text-xs text-muted-foreground hover:text-destructive"
+                          className="flex text-muted-foreground hover:text-destructive"
                           aria-label="Supprimer"
                         >
-                          ✕
+                          <X className="h-3.5 w-3.5" />
                         </button>
                       </form>
                     </li>

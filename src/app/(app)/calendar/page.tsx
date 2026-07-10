@@ -95,8 +95,8 @@ export default async function CalendarPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Calendrier</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-3xl font-semibold tracking-tight">Calendrier</h1>
+        <p className="mt-1 text-muted-foreground">
           Sorties, contenus planifiés et tâches de checklist, mois par mois.
         </p>
       </div>
