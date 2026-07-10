@@ -85,6 +85,7 @@ export default async function StudioPage() {
             items.some((it) => it.release_id === r.id),
           )}
           showReleaseFilter
+          enableBulkDelete
         />
       )}
     </div>

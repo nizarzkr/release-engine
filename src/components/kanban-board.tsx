@@ -7,6 +7,7 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
+import { Check } from "lucide-react";
 import {
   PIPELINE_STATUSES,
   PIPELINE_LABELS,
@@ -47,11 +48,19 @@ export function KanbanBoard({
   items,
   sourceBlocks,
   enableQuickAdd = true,
+  selecting = false,
+  selectedIds,
+  onToggleSelect,
+  onToggleColumn,
 }: {
   releaseId?: string;
   items: BoardItem[];
   sourceBlocks: { id: string; label: string }[];
   enableQuickAdd?: boolean;
+  selecting?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleColumn?: (ids: string[]) => void;
 }) {
   const [columns, setColumns] = useState<Columns>(() => group(items));
   const [, startTransition] = useTransition();
@@ -119,9 +128,18 @@ export function KanbanBoard({
                     />
                     {PIPELINE_LABELS[status]}
                   </span>
-                  <span className="rounded-full border bg-card px-1.5 py-px text-xs font-medium text-muted-foreground">
-                    {columns[status].length}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border bg-card px-1.5 py-px text-xs font-medium text-muted-foreground">
+                      {columns[status].length}
+                    </span>
+                    {selecting && columns[status].length > 0 && (
+                      <ColumnCheck
+                        ids={columns[status].map((i) => i.id)}
+                        selectedIds={selectedIds}
+                        onToggle={onToggleColumn}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 {enableQuickAdd && releaseId && status === "BACKLOG" && (
@@ -129,7 +147,12 @@ export function KanbanBoard({
                 )}
 
                 {columns[status].map((item, index) => (
-                  <Draggable draggableId={item.id} index={index} key={item.id}>
+                  <Draggable
+                    draggableId={item.id}
+                    index={index}
+                    key={item.id}
+                    isDragDisabled={selecting}
+                  >
                     {(dp, ds) => (
                       <div
                         ref={dp.innerRef}
@@ -140,6 +163,9 @@ export function KanbanBoard({
                           item={item}
                           sourceBlocks={sourceBlocks}
                           dragging={ds.isDragging}
+                          selectable={selecting}
+                          selected={selectedIds?.has(item.id)}
+                          onToggleSelect={() => onToggleSelect?.(item.id)}
                         />
                       </div>
                     )}
@@ -152,6 +178,43 @@ export function KanbanBoard({
         ))}
       </div>
     </DragDropContext>
+  );
+}
+
+// Case en tête de colonne : coche/décoche toutes les cartes de la colonne.
+function ColumnCheck({
+  ids,
+  selectedIds,
+  onToggle,
+}: {
+  ids: string[];
+  selectedIds?: Set<string>;
+  onToggle?: (ids: string[]) => void;
+}) {
+  const selectedCount = ids.filter((id) => selectedIds?.has(id)).length;
+  const all = selectedCount === ids.length;
+  const some = selectedCount > 0 && !all;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle?.(ids)}
+      aria-label="Sélectionner la colonne"
+      title="Sélectionner toute la colonne"
+      className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-2 transition-colors ${
+        all || some
+          ? "border-primary bg-primary text-white"
+          : "border-input bg-card text-transparent hover:border-primary/50"
+      }`}
+    >
+      {all ? (
+        <Check className="h-3 w-3" strokeWidth={3} />
+      ) : some ? (
+        <span className="h-0.5 w-2.5 rounded bg-white" />
+      ) : (
+        <Check className="h-3 w-3" strokeWidth={3} />
+      )}
+    </button>
   );
 }
 

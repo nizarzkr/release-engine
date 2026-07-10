@@ -131,3 +131,15 @@ export async function deleteContent(id: string, releaseId: string) {
   revalidatePath(`/releases/${releaseId}/board`);
   revalidatePath("/studio");
 }
+
+// Suppression groupée depuis le board global (Studio). La RLS restreint déjà
+// aux cartes de l'utilisateur ; `.in` filtre le lot d'un coup.
+export async function deleteContentBulk(ids: string[]) {
+  await getUserOrRedirect();
+  const unique = Array.from(new Set(ids)).filter(Boolean);
+  if (unique.length === 0) return;
+  const supabase = await createClient();
+  await supabase.from("content_item").delete().in("id", unique);
+  await syncGoogleBestEffort();
+  revalidatePath("/studio");
+}

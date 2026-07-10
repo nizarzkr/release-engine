@@ -1,4 +1,4 @@
-import { CalendarDays, Clapperboard, Disc3 } from "lucide-react";
+import { CalendarDays, Clapperboard, Disc3, Check } from "lucide-react";
 import type { Tables } from "@/types/database.types";
 import type { AutoTag, AutoTagTone } from "@/lib/domain/content-tags";
 import { cardTitle, FORMAT_LABELS, type ContentFormat } from "@/lib/domain/content";
@@ -23,17 +23,28 @@ export function ContentCard({
   item,
   sourceBlocks,
   dragging,
+  selectable,
+  selected,
+  onToggleSelect,
 }: {
   item: BoardItem;
   sourceBlocks: { id: string; label: string }[];
   dragging?: boolean;
+  // Mode sélection groupée (Studio) : la carte devient cliquable pour cocher,
+  // et le bouton d'édition laisse place à une case à cocher.
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const manualTags = item.tags ?? [];
 
   return (
     <div
+      onClick={selectable ? onToggleSelect : undefined}
       className={`rounded-xl border bg-card p-3 shadow-sm transition-shadow ${
         dragging ? "ring-2 ring-primary/40 shadow-md" : ""
+      } ${selectable ? "cursor-pointer" : ""} ${
+        selected ? "ring-2 ring-primary" : ""
       }`}
     >
       {item.releaseTitle && (
@@ -44,11 +55,23 @@ export function ContentCard({
       )}
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium leading-snug">{cardTitle(item)}</p>
-        <ContentDialog
-          item={item}
-          releaseId={item.release_id}
-          sourceBlocks={sourceBlocks}
-        />
+        {selectable ? (
+          <span
+            className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-2 transition-colors ${
+              selected
+                ? "border-primary bg-primary text-white"
+                : "border-input text-transparent"
+            }`}
+          >
+            <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+        ) : (
+          <ContentDialog
+            item={item}
+            releaseId={item.release_id}
+            sourceBlocks={sourceBlocks}
+          />
+        )}
       </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">

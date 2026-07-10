@@ -5,9 +5,20 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
   type ReactNode,
 } from "react";
-import { List, LayoutGrid, ChevronDown, Check, ArrowDownUp } from "lucide-react";
+import {
+  List,
+  LayoutGrid,
+  ChevronDown,
+  Check,
+  ArrowDownUp,
+  CheckSquare,
+  Trash2,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 import {
   PIPELINE_STATUSES,
   PIPELINE_LABELS,
@@ -16,6 +27,7 @@ import {
   cardTitle,
   type PipelineStatus,
 } from "@/lib/domain/content";
+import { deleteContentBulk } from "@/app/(app)/releases/[id]/content-actions";
 import { KanbanBoard } from "@/components/kanban-board";
 import { BoardList } from "@/components/board-list";
 import type { BoardItem } from "@/components/content-card";
@@ -42,6 +54,7 @@ export function BoardView({
   enableQuickAdd = true,
   releases = [],
   showReleaseFilter = false,
+  enableBulkDelete = false,
 }: {
   releaseId?: string;
   items: BoardItem[];
@@ -49,6 +62,7 @@ export function BoardView({
   enableQuickAdd?: boolean;
   releases?: { id: string; title: string }[];
   showReleaseFilter?: boolean;
+  enableBulkDelete?: boolean;
 }) {
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [relF, setRelF] = useState<string[]>([]);
@@ -56,6 +70,12 @@ export function BoardView({
   const [fmtF, setFmtF] = useState<string[]>([]);
   const [statF, setStatF] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>("date");
+
+  // Sélection groupée (suppression multiple).
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, startDelete] = useTransition();
 
   const platformOptions = useMemo(
     () =>
@@ -112,6 +132,67 @@ export function BoardView({
     set: (v: string[]) => void,
     v: string,
   ) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+
+  // Purge les ids disparus (après suppression) pour ne jamais viser une carte
+  // qui n'existe plus.
+  useEffect(() => {
+    setSelected((prev) => {
+      const live = new Set(items.map((i) => i.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (live.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [items]);
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // Coche/décoche un lot d'un coup (une colonne entière du kanban).
+  const toggleMany = (ids: string[]) =>
+    setSelected((prev) => {
+      const allIn = ids.length > 0 && ids.every((id) => prev.has(id));
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (allIn) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+
+  const filteredIds = useMemo(() => filtered.map((i) => i.id), [filtered]);
+  const allSelected =
+    filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(filteredIds));
+
+  const exitSelection = () => {
+    setSelecting(false);
+    setSelected(new Set());
+    setConfirming(false);
+  };
+
+  const runDelete = () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    startDelete(async () => {
+      await deleteContentBulk(ids);
+      toast.success(
+        `${ids.length} carte${ids.length > 1 ? "s" : ""} supprimée${
+          ids.length > 1 ? "s" : ""
+        }.`,
+      );
+      exitSelection();
+    });
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -189,6 +270,16 @@ export function BoardView({
         )}
 
         <div className="ml-auto flex items-center gap-2.5">
+          {enableBulkDelete && !selecting && items.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelecting(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-card px-3 py-2 text-[13px] font-medium text-foreground/80 transition-colors hover:bg-secondary"
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
+              Sélectionner
+            </button>
+          )}
           <Dropdown
             label={`Trier : ${SORTS.find((s) => s.key === sort)?.label}`}
             icon={<ArrowDownUp className="h-3.5 w-3.5" />}
@@ -224,18 +315,91 @@ export function BoardView({
         </div>
       </div>
 
+      {/* BARRE DE SÉLECTION */}
+      {selecting && (
+        <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-primary/40 bg-primary/5 px-3.5 py-2.5">
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="text-[13px] font-medium text-primary underline underline-offset-2"
+          >
+            {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+          </button>
+          <span className="text-[13px] text-muted-foreground">
+            {selected.size} sélectionnée{selected.size > 1 ? "s" : ""}
+          </span>
+
+          <div className="ml-auto flex items-center gap-2.5">
+            {confirming ? (
+              <>
+                <span className="text-[13px] text-foreground">
+                  Supprimer {selected.size} carte
+                  {selected.size > 1 ? "s" : ""} ?
+                </span>
+                <button
+                  type="button"
+                  onClick={runDelete}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-[13px] font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-60"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {deleting ? "Suppression…" : "Confirmer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  disabled={deleting}
+                  className="text-[13px] text-muted-foreground hover:text-foreground"
+                >
+                  Annuler
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(true)}
+                  disabled={selected.size === 0}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-[13px] font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Supprimer
+                </button>
+                <button
+                  type="button"
+                  onClick={exitSelection}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-card px-3 py-2 text-[13px] font-medium text-foreground/80 transition-colors hover:bg-secondary"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Quitter
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {view === "kanban" ? (
         <KanbanBoard
           releaseId={releaseId}
           items={filtered}
           sourceBlocks={sourceBlocks}
           enableQuickAdd={enableQuickAdd}
+          selecting={selecting}
+          selectedIds={selected}
+          onToggleSelect={toggleSelect}
+          onToggleColumn={toggleMany}
         />
       ) : (
         <BoardList
           items={filtered}
           sourceBlocks={sourceBlocks}
           showRelease={showReleaseFilter}
+          selecting={selecting}
+          selectedIds={selected}
+          onToggleSelect={toggleSelect}
+          onToggleAll={toggleAll}
+          allSelected={allSelected}
         />
       )}
     </div>
