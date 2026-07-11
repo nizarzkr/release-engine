@@ -1,26 +1,24 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/auth";
-import { ProfileForm } from "@/components/profile-form";
+import { OnboardingWizard } from "./onboarding-wizard";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string | string[] }>;
+}) {
   const profile = await getProfile();
+  const { preview } = await searchParams;
+
+  // Prévisualisation locale (dev uniquement) : ?preview=1 laisse voir le wizard
+  // même avec un profil existant. En prod, la garde redirige toujours.
+  const previewInDev =
+    process.env.NODE_ENV === "development" && preview === "1";
 
   // Profil déjà créé → pas d'onboarding.
-  if (profile) {
+  if (profile && !previewInDev) {
     redirect("/dashboard");
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Bienvenue 👋</h1>
-        <p className="text-muted-foreground">
-          Pose ton ADN artistique. Ces infos nourriront la génération de contenu
-          par IA (à partir de J7). Tu pourras tout modifier plus tard.
-        </p>
-      </div>
-
-      <ProfileForm initial={null} submitLabel="Créer mon profil" />
-    </div>
-  );
+  return <OnboardingWizard initialProfile={previewInDev ? profile : null} />;
 }

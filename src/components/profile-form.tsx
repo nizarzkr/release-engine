@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useActionToast } from "@/lib/use-action-toast";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import {
@@ -17,15 +17,24 @@ import { Textarea } from "@/components/ui/textarea";
 export function ProfileForm({
   initial,
   submitLabel = "Enregistrer",
+  redirectTo = "/dashboard",
+  onSaved,
 }: {
   initial: Tables<"artist_profile"> | null;
   submitLabel?: string;
+  // Où aller après enregistrement. `null` = rester (le wizard enchaîne via
+  // onSaved).
+  redirectTo?: string | null;
+  onSaved?: () => void;
 }) {
   const [state, formAction, pending] = useActionState<ProfileState, FormData>(
-    saveProfile,
+    saveProfile.bind(null, redirectTo),
     {},
   );
   useActionToast(state, "Profil enregistré.");
+  useEffect(() => {
+    if (state.ok) onSaved?.();
+  }, [state.ok, onSaved]);
 
   const stance = initial?.image_stance ?? "HYBRIDE";
 

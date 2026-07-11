@@ -6,9 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserOrRedirect } from "@/lib/auth";
 import { ProfileSchema, parseList } from "@/lib/domain/profile";
 
-export type ProfileState = { error?: string };
+export type ProfileState = { ok?: boolean; error?: string };
 
 export async function saveProfile(
+  // Destination après enregistrement. `null` → pas de redirection : l'action
+  // renvoie { ok } pour que l'appelant enchaîne (wizard d'onboarding).
+  redirectTo: string | null,
   _prev: ProfileState,
   formData: FormData,
 ): Promise<ProfileState> {
@@ -42,5 +45,6 @@ export async function saveProfile(
 
   revalidatePath("/dashboard");
   revalidatePath("/settings");
-  redirect("/dashboard");
+  if (redirectTo) redirect(redirectTo);
+  return { ok: true };
 }
