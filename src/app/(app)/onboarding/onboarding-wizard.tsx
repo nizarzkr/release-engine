@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Disc3,
   Sparkles,
@@ -20,13 +21,26 @@ const STEPS = ["Profil artiste", "Comment ça marche", "Ta première release"];
 
 export function OnboardingWizard({
   initialProfile = null,
+  alreadyOnboarded = false,
 }: {
   // Renseigné seulement en prévisualisation (dev) pour pré-remplir le formulaire
   // et éviter d'écraser un profil existant. En vrai onboarding : null.
   initialProfile?: Tables<"artist_profile"> | null;
+  // Utilisateur qui avait déjà un profil au chargement → on le renvoie au
+  // dashboard. Capturé une seule fois : créer le profil à l'étape 1 ne doit pas
+  // déclencher cette redirection en cours de route.
+  alreadyOnboarded?: boolean;
 }) {
+  const router = useRouter();
+  const [skip] = useState(alreadyOnboarded);
   const [step, setStep] = useState(0);
   const goProfileDone = useCallback(() => setStep(1), []);
+
+  useEffect(() => {
+    if (skip) router.replace("/dashboard");
+  }, [skip, router]);
+
+  if (skip) return null;
 
   return (
     <div className="flex flex-col gap-6">

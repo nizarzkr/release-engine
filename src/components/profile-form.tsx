@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { useActionToast } from "@/lib/use-action-toast";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import {
   IMAGE_STANCES,
   IMAGE_STANCE_LABELS,
+  CONTENT_PLATFORMS,
   listToString,
 } from "@/lib/domain/profile";
 import type { Tables } from "@/types/database.types";
@@ -13,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export function ProfileForm({
   initial,
@@ -108,18 +111,13 @@ export function ProfileForm({
         </select>
       </Field>
 
-      <Field
-        label="Plateformes actives"
-        htmlFor="platforms"
-        hint="Séparées par des virgules (ex. TikTok, Instagram, YouTube)"
-      >
-        <Input
-          id="platforms"
-          name="platforms"
-          defaultValue={listToString(initial?.platforms)}
-          placeholder="TikTok, Instagram, YouTube"
-        />
-      </Field>
+      <div className="flex flex-col gap-2">
+        <Label>Plateformes actives</Label>
+        <PlatformPicker initial={initial?.platforms ?? []} />
+        <p className="text-xs text-muted-foreground">
+          Déroule et coche les plateformes que tu utilises.
+        </p>
+      </div>
 
       <Field
         label="Capacité de production hebdo"
@@ -158,6 +156,90 @@ export function ProfileForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function PlatformPicker({ initial }: { initial: string[] }) {
+  const [selected, setSelected] = useState<string[]>(initial);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Liste des options : les plateformes proposées + d'éventuelles valeurs déjà
+  // enregistrées hors liste (custom historiques), pour ne rien perdre.
+  const options = useMemo(() => {
+    const base = [...CONTENT_PLATFORMS] as string[];
+    for (const p of initial) if (!base.includes(p)) base.push(p);
+    return base;
+  }, [initial]);
+
+  // Ferme au clic extérieur.
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const toggle = (p: string) =>
+    setSelected((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
+    );
+
+  const summary =
+    selected.length === 0
+      ? "Choisir des plateformes…"
+      : selected.length <= 3
+        ? selected.join(", ")
+        : `${selected.slice(0, 3).join(", ")} +${selected.length - 3}`;
+
+  return (
+    <div ref={ref} className="relative max-w-xs">
+      {/* Valeur soumise au serveur : parseList la relit telle quelle. */}
+      <input type="hidden" name="platforms" value={selected.join(", ")} />
+
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={cn(
+          "flex w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors hover:bg-secondary",
+          selected.length === 0 && "text-muted-foreground",
+        )}
+      >
+        <span className="truncate">{summary}</span>
+        <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-11 z-30 max-h-64 w-full min-w-56 overflow-y-auto rounded-xl border bg-popover p-1.5 shadow-lg">
+          {options.map((p) => {
+            const on = selected.includes(p);
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => toggle(p)}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-secondary"
+              >
+                <span
+                  className={cn(
+                    "flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] border-2 transition-colors",
+                    on
+                      ? "border-primary bg-primary text-white"
+                      : "border-input text-transparent",
+                  )}
+                >
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+                {p}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

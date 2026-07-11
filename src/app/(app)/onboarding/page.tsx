@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/auth";
 import { OnboardingWizard } from "./onboarding-wizard";
 
@@ -11,14 +10,20 @@ export default async function OnboardingPage({
   const { preview } = await searchParams;
 
   // Prévisualisation locale (dev uniquement) : ?preview=1 laisse voir le wizard
-  // même avec un profil existant. En prod, la garde redirige toujours.
+  // même avec un profil existant.
   const previewInDev =
     process.env.NODE_ENV === "development" && preview === "1";
 
-  // Profil déjà créé → pas d'onboarding.
-  if (profile && !previewInDev) {
-    redirect("/dashboard");
-  }
+  // NB : pas de redirection serveur ici. L'étape 1 crée le profil, ce qui
+  // rafraîchit ce Server Component ; une garde serveur redirigerait alors vers
+  // le dashboard en plein milieu du wizard. La redirection des utilisateurs
+  // déjà onboardés est gérée côté client (capturée une seule fois au montage).
+  const alreadyOnboarded = !!profile && !previewInDev;
 
-  return <OnboardingWizard initialProfile={previewInDev ? profile : null} />;
+  return (
+    <OnboardingWizard
+      alreadyOnboarded={alreadyOnboarded}
+      initialProfile={previewInDev ? profile : null}
+    />
+  );
 }

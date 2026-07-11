@@ -4,6 +4,24 @@ import { z } from "zod";
 export const IMAGE_STANCES = ["FACE", "ANONYME", "HYBRIDE"] as const;
 export type ImageStance = (typeof IMAGE_STANCES)[number];
 
+// Plateformes proposées à la sélection dans le profil (liste cliquable).
+// L'artiste peut en cocher plusieurs ; d'éventuelles valeurs personnalisées
+// déjà enregistrées restent affichées et sélectionnées.
+export const CONTENT_PLATFORMS = [
+  "TikTok",
+  "Instagram",
+  "YouTube",
+  "YouTube Shorts",
+  "Spotify",
+  "Apple Music",
+  "Deezer",
+  "SoundCloud",
+  "Snapchat",
+  "X (Twitter)",
+  "Facebook",
+  "Twitch",
+] as const;
+
 export const IMAGE_STANCE_LABELS: Record<ImageStance, string> = {
   FACE: "Face caméra (visage assumé)",
   ANONYME: "Anonyme (jamais de visage)",
