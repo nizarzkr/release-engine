@@ -22,7 +22,7 @@ export function AppHeader({ artistName }: { artistName: string | null }) {
 
   return (
     <header className="relative border-b">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-6">
           <Link
             href="/dashboard"
@@ -75,7 +75,7 @@ export function AppHeader({ artistName }: { artistName: string | null }) {
       {/* Panneau nav mobile */}
       {open && (
         <div className="absolute inset-x-0 top-14 z-40 border-b bg-background shadow-sm sm:hidden">
-          <nav className="mx-auto flex max-w-6xl flex-col px-4 py-2 text-sm">
+          <nav className="mx-auto flex max-w-4xl flex-col px-4 py-2 text-sm">
             {LINKS.map((l) => (
               <Link
                 key={l.href}

@@ -13,16 +13,21 @@ export default async function AppLayout({
   const profile = await getProfile();
 
   return (
-    <div className="flex min-h-full flex-col">
+    // Backdrop « muted » autour d'un contenu cadré : le contenu vit dans un
+    // panneau crème bordé et centré (effet « fenêtre d'app »). Les cartes
+    // blanches internes gardent leur contraste sur le crème du panneau.
+    <div className="flex min-h-full flex-col bg-muted">
       <AppHeader artistName={profile?.artist_name ?? null} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
-        {/* Bouton d'aide contextuel, en haut à droite de la page (sous le nom
-            d'artiste et la déconnexion), sur sa propre ligne pour ne jamais
-            chevaucher les actions de page. */}
-        <div className="mb-4 flex justify-end">
-          <HelpMenu />
+      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <div className="mx-auto w-full max-w-4xl rounded-2xl border bg-background shadow-sm">
+          <div className="p-5 sm:p-8">
+            {/* Bouton d'aide contextuel, en haut à droite du cadre. */}
+            <div className="mb-4 flex justify-end">
+              <HelpMenu />
+            </div>
+            {children}
+          </div>
         </div>
-        {children}
       </main>
     </div>
   );
