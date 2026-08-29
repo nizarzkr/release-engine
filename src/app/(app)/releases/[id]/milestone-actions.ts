@@ -13,7 +13,7 @@ import {
   reorderMilestones,
   replaceMilestone,
 } from "@/lib/domain/milestone";
-import { EMPTY_BRIEF } from "@/lib/domain/content";
+import { EMPTY_BRIEF, type Brief } from "@/lib/domain/content";
 import { syncGoogleBestEffort } from "@/lib/google/sync";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
@@ -42,9 +42,12 @@ function persistMilestones(
 }
 
 /**
- * Aligne la carte liée à un jalon. Le jalon ne pilote que le titre (`theme`)
- * et la date programmée : ni la colonne kanban, ni le brief, ni le tournage
- * source ne sont touchés — ce qui a été saisi dans la carte reste intact.
+ * Aligne la carte liée à un jalon. Le jalon pilote le titre (`theme`), la date
+ * programmée et — si `concept` est fourni — le concept du brief. La colonne
+ * kanban, le tournage source et le RESTE du brief (hook, structure, son, CTA)
+ * ne sont jamais touchés : ce qui a été saisi dans le Studio reste intact.
+ *
+ * `concept: null` = ne pas toucher au brief (cas d'un simple déplacement).
  * `createIfMissing` : crée la carte quand elle n'existe pas encore.
  */
 async function syncMilestoneCard(
@@ -54,20 +57,31 @@ async function syncMilestoneCard(
   releaseDate: string,
   milestone: MilestoneDef,
   createIfMissing: boolean,
+  concept: string | null = null,
 ): Promise<{ touched: boolean; error?: string }> {
   const fields = milestoneCardFields(milestone, releaseDate);
 
   const { data: existing } = await supabase
     .from("content_item")
-    .select("id")
+    .select("id, brief")
     .eq("release_id", releaseId)
     .eq("milestone_key", milestone.key)
     .maybeSingle();
 
   if (existing) {
+    // Relecture-fusion plutôt qu'écriture directe : `brief` est un jsonb, un
+    // update partiel de la colonne écraserait les autres champs du brief.
+    const brief =
+      concept === null
+        ? undefined
+        : {
+            ...EMPTY_BRIEF,
+            ...((existing.brief ?? {}) as Partial<Brief>),
+            concept,
+          };
     const { error } = await supabase
       .from("content_item")
-      .update(fields)
+      .update(brief ? { ...fields, brief } : fields)
       .eq("id", existing.id);
     return { touched: !error, error: error?.message };
   }
@@ -79,7 +93,7 @@ async function syncMilestoneCard(
     release_id: releaseId,
     milestone_key: milestone.key,
     ...fields,
-    brief: { ...EMPTY_BRIEF },
+    brief: { ...EMPTY_BRIEF, concept: concept ?? "" },
     pipeline_status: "BACKLOG",
   });
   return { touched: !error, error: error?.message };
@@ -94,8 +108,9 @@ function revalidateRelease(releaseId: string) {
 
 /**
  * Édite un jalon (titre + date) dans le snapshot de la release, puis
- * synchronise sa carte kanban. La case « créer la carte » n'a d'effet que la
- * première fois : ensuite la carte existante est simplement mise à jour.
+ * synchronise sa carte kanban — dont le concept, seul champ du brief que ce
+ * formulaire pilote. La case « créer la carte » n'a d'effet que la première
+ * fois : ensuite la carte existante est simplement mise à jour.
  */
 export async function updateMilestone(
   releaseId: string,
@@ -107,6 +122,7 @@ export async function updateMilestone(
   const parsed = MilestoneEditSchema.safeParse({
     label: (formData.get("label") ?? "").toString().trim(),
     date: (formData.get("date") ?? "").toString(),
+    concept: (formData.get("concept") ?? "").toString(),
     create_card: formData.get("create_card") === "on",
   });
   if (!parsed.success) {
@@ -141,13 +157,17 @@ export async function updateMilestone(
   );
   if (error) return { error: error.message };
 
+  // Un concept saisi implique la carte : sans elle, le texte n'aurait nulle
+  // part où être stocké (le concept vit dans le brief de la carte).
+  const concept = parsed.data.concept.trim();
   const card = await syncMilestoneCard(
     supabase,
     user.id,
     releaseId,
     release.release_date,
     updated,
-    parsed.data.create_card,
+    parsed.data.create_card || concept.length > 0,
+    concept,
   );
   if (card.error) return { error: card.error };
   if (card.touched) await syncGoogleBestEffort();

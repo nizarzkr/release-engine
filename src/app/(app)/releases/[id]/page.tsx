@@ -21,6 +21,7 @@ import {
   PIPELINE_STATUSES,
   PIPELINE_LABELS,
   PIPELINE_COLORS,
+  type Brief,
   type PipelineStatus,
 } from "@/lib/domain/content";
 import {
@@ -80,7 +81,7 @@ export default async function ReleaseDetailPage({
         .order("due_date", { ascending: true, nullsFirst: false }),
       supabase
         .from("content_item")
-        .select("id, milestone_key, pipeline_status")
+        .select("id, milestone_key, pipeline_status, brief")
         .eq("release_id", id),
       supabase
         .from("source_block")
@@ -122,6 +123,7 @@ export default async function ReleaseDetailPage({
       id: c.id,
       milestone_key: c.milestone_key as string,
       pipeline_status: (c.pipeline_status ?? "BACKLOG") as PipelineStatus,
+      concept: ((c.brief ?? {}) as Partial<Brief>).concept ?? "",
     }));
 
   // --- Timeline (aperçu) ---

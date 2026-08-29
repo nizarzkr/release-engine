@@ -117,9 +117,15 @@ export function milestoneCardFields(
 }
 
 /**
- * Édition d'un jalon depuis la timeline. Volontairement minimal : un titre et
- * une date. La case `create_card` déclenche la création de la carte kanban
- * (décochée par défaut : on ne pollue le board que sur geste explicite).
+ * Édition d'un jalon depuis la timeline : un titre, une date, et le concept
+ * de la carte à produire. La case `create_card` déclenche la création de la
+ * carte kanban (décochée par défaut : on ne pollue le board que sur geste
+ * explicite) — mais saisir un concept vaut aussi demande de création, sinon
+ * le texte serait écrit dans le vide.
+ *
+ * `concept` partage la limite de `ContentSchema.brief.concept` : les deux
+ * formulaires écrivent le MÊME champ, une limite plus large ici ferait passer
+ * une valeur que la carte refuserait ensuite.
  */
 export const MilestoneEditSchema = z.object({
   label: z
@@ -129,6 +135,9 @@ export const MilestoneEditSchema = z.object({
   date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Date invalide." }),
+  concept: z
+    .string()
+    .max(2000, { error: "Concept trop long (2000 caractères max)." }),
   create_card: z.boolean(),
 });
 

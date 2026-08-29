@@ -19,6 +19,7 @@ import { formatOffset, type MilestoneDef } from "@/lib/domain/timeline";
 import { PIPELINE_LABELS, type PipelineStatus } from "@/lib/domain/content";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -33,6 +34,7 @@ export type MilestoneCard = {
   id: string;
   milestone_key: string;
   pipeline_status: PipelineStatus;
+  concept: string;
 };
 
 export function MilestoneDialog({
@@ -139,14 +141,28 @@ function MilestoneForm({
         </p>
       </div>
 
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="concept">Concept</Label>
+        <Textarea
+          id="concept"
+          name="concept"
+          rows={3}
+          defaultValue={card?.concept ?? ""}
+          placeholder="L'idée du contenu à produire pour ce jalon…"
+        />
+        <p className="text-xs text-muted-foreground">
+          Même champ que le concept de la carte dans le Studio.
+        </p>
+      </div>
+
       {card ? (
         <div className="rounded-lg border bg-secondary p-3 text-xs">
           <p className="font-medium text-foreground">
             Carte liée · {PIPELINE_LABELS[card.pipeline_status]}
           </p>
           <p className="mt-1 text-muted-foreground">
-            Le titre et la date suivent le jalon. Le concept et le brief se
-            saisissent dans la carte.
+            Le titre, la date et le concept suivent le jalon. Le reste du brief
+            (hook, structure, son, CTA) se saisit dans la carte.
           </p>
           <Link
             href={`/releases/${releaseId}/board`}
@@ -168,7 +184,7 @@ function MilestoneForm({
             </span>
             <span className="mt-0.5 block text-muted-foreground">
               Ajoute une carte au pipeline (colonne Backlog) pour produire le
-              contenu de ce jalon.
+              contenu de ce jalon. Saisir un concept la crée aussi.
             </span>
           </span>
         </label>
