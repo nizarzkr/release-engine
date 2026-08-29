@@ -34,6 +34,20 @@ export function isAnchor(milestone: MilestoneDef): boolean {
   return milestone.offset === 0 && milestone.phase === "DAY";
 }
 
+/**
+ * Le jour de sortie porte-t-il déjà son jalon ? L'ancre étant reconnue à sa
+ * seule position (J+0, phase DAY), un second jalon ce jour-là deviendrait une
+ * deuxième « ancre » : verrouillé et non déplaçable sans raison visible.
+ */
+export function hasAnchor(milestones: MilestoneDef[]): boolean {
+  return milestones.some(isAnchor);
+}
+
+/** Nombre de jalons au-delà duquel la timeline n'est plus exploitable —
+ *  aligné sur la limite de `ReleaseTemplateSchema`, qu'un « Enregistrer comme
+ *  format » heurterait sinon plus tard, sans rapport apparent avec l'ajout. */
+export const MAX_MILESTONES = 40;
+
 /** Date réelle d'un jalon (YYYY-MM-DD). */
 export function milestoneDate(
   milestone: MilestoneDef,

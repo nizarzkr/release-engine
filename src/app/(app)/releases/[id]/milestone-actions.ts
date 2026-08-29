@@ -3,15 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getUserOrRedirect } from "@/lib/auth";
-import { coerceMilestones, ReleaseTemplateSchema } from "@/lib/domain/release-template";
+import {
+  coerceMilestones,
+  MilestoneSchema,
+  ReleaseTemplateSchema,
+} from "@/lib/domain/release-template";
 import type { MilestoneDef } from "@/lib/domain/timeline";
 import {
+  MAX_MILESTONES,
   MilestoneEditSchema,
+  hasAnchor,
+  isAnchor,
   milestoneCardFields,
   offsetForDate,
   phaseForOffset,
   reorderMilestones,
   replaceMilestone,
+  sortMilestones,
 } from "@/lib/domain/milestone";
 import { EMPTY_BRIEF, type Brief } from "@/lib/domain/content";
 import { syncGoogleBestEffort } from "@/lib/google/sync";
@@ -172,6 +180,129 @@ export async function updateMilestone(
   if (card.error) return { error: card.error };
   if (card.touched) await syncGoogleBestEffort();
 
+  revalidateRelease(releaseId);
+  return { ok: true };
+}
+
+/**
+ * Ajoute un jalon à la timeline d'une release. Même formulaire que l'édition
+ * (titre, date, concept, carte), à ceci près que la date est libre : c'est
+ * elle qui donne au jalon sa position et sa phase.
+ */
+export async function createMilestone(
+  releaseId: string,
+  _prev: MilestoneState,
+  formData: FormData,
+): Promise<MilestoneState> {
+  const user = await getUserOrRedirect();
+  const parsed = MilestoneEditSchema.safeParse({
+    label: (formData.get("label") ?? "").toString().trim(),
+    date: (formData.get("date") ?? "").toString(),
+    concept: (formData.get("concept") ?? "").toString(),
+    create_card: formData.get("create_card") === "on",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Champs invalides." };
+  }
+
+  const supabase = await createClient();
+  const release = await loadRelease(supabase, releaseId);
+  if (!release) return { error: "Release introuvable." };
+
+  if (release.milestones.length >= MAX_MILESTONES) {
+    return { error: `Timeline pleine (${MAX_MILESTONES} jalons max).` };
+  }
+
+  const offset = offsetForDate(release.release_date, parsed.data.date);
+  if (offset === 0 && hasAnchor(release.milestones)) {
+    return {
+      error: "Le jour de sortie porte déjà son jalon. Choisis une autre date.",
+    };
+  }
+
+  // Clé aléatoire plutôt qu'un rang : les clés portent le lien vers les cartes,
+  // et une clé recyclée ferait pointer le nouveau jalon sur une carte ancienne.
+  const created = {
+    key: crypto.randomUUID(),
+    label: parsed.data.label,
+    offset,
+    phase: phaseForOffset(offset),
+  };
+  // Rejoue le schéma partagé : il porte les bornes d'offset (±365), donc une
+  // date absurde est refusée ici plutôt qu'écrite dans le snapshot.
+  const valid = MilestoneSchema.safeParse(created);
+  if (!valid.success) {
+    return { error: valid.error.issues[0]?.message ?? "Jalon invalide." };
+  }
+
+  const { error } = await persistMilestones(
+    supabase,
+    releaseId,
+    sortMilestones([...release.milestones, valid.data]),
+  );
+  if (error) return { error: error.message };
+
+  const concept = parsed.data.concept.trim();
+  const card = await syncMilestoneCard(
+    supabase,
+    user.id,
+    releaseId,
+    release.release_date,
+    valid.data,
+    parsed.data.create_card || concept.length > 0,
+    concept,
+  );
+  if (card.error) return { error: card.error };
+  if (card.touched) await syncGoogleBestEffort();
+
+  revalidateRelease(releaseId);
+  return { ok: true };
+}
+
+/**
+ * Supprime un jalon ET la carte qu'il a générée : un jalon = une carte, la
+ * carte n'a pas de vie propre une fois son jalon disparu.
+ *
+ * Le jour de sortie est refusé : sa date EST celle de la release et il sert
+ * d'origine aux offsets — sans lui, les J± des autres jalons ne veulent plus
+ * rien dire. Il se supprime avec la release elle-même.
+ */
+export async function deleteMilestone(
+  releaseId: string,
+  key: string,
+  _prev: MilestoneState,
+  _formData: FormData,
+): Promise<MilestoneState> {
+  await getUserOrRedirect();
+  const supabase = await createClient();
+  const release = await loadRelease(supabase, releaseId);
+  if (!release) return { error: "Release introuvable." };
+
+  const target = release.milestones.find((m) => m.key === key);
+  if (!target) return { error: "Jalon introuvable." };
+  if (isAnchor(target)) {
+    return {
+      error: "Le jour de sortie ancre la timeline : il ne se supprime pas.",
+    };
+  }
+
+  // La carte d'abord : si le retrait du jalon passait mais pas celui de la
+  // carte, elle resterait dans le board en pointant un jalon fantôme.
+  const { error: cardError } = await supabase
+    .from("content_item")
+    .delete()
+    .eq("release_id", releaseId)
+    .eq("milestone_key", key);
+  if (cardError) return { error: cardError.message };
+
+  const { error } = await persistMilestones(
+    supabase,
+    releaseId,
+    release.milestones.filter((m) => m.key !== key),
+  );
+  if (error) return { error: error.message };
+
+  await syncGoogleBestEffort();
   revalidateRelease(releaseId);
   return { ok: true };
 }

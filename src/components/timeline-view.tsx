@@ -7,7 +7,7 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Plus } from "lucide-react";
 import {
   formatOffset,
   type MilestoneDef,
@@ -21,7 +21,11 @@ import {
 import { MILESTONE_PHASE_COLORS } from "@/lib/domain/release-template";
 import { PIPELINE_COLORS, PIPELINE_LABELS } from "@/lib/domain/content";
 import { moveMilestone } from "@/app/(app)/releases/[id]/milestone-actions";
-import { MilestoneDialog, type MilestoneCard } from "@/components/milestone-dialog";
+import {
+  MilestoneAddDialog,
+  MilestoneDialog,
+  type MilestoneCard,
+} from "@/components/milestone-dialog";
 import { formatDateFr } from "@/lib/format";
 
 /**
@@ -85,7 +89,25 @@ export function TimelineView({
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="timeline">
         {(provided) => (
-          <TimelineFrame ref={provided.innerRef} {...provided.droppableProps}>
+          <TimelineFrame
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            footer={
+              <MilestoneAddDialog
+                releaseId={releaseId}
+                releaseDate={releaseDate}
+              >
+                <span className="group relative flex w-full items-center gap-3 rounded-lg py-2 text-left transition-colors hover:bg-secondary/70">
+                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/50 bg-background ring-2 ring-background transition-colors group-hover:border-primary">
+                    <Plus className="h-2.5 w-2.5 text-muted-foreground transition-colors group-hover:text-primary" />
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                    Ajouter un jalon
+                  </span>
+                </span>
+              </MilestoneAddDialog>
+            }
+          >
             {list.map((m, index) => (
               <Draggable
                 draggableId={m.key}
@@ -151,9 +173,10 @@ export function TimelineView({
  *  superpose au filet : elle reste dans le flux, donc elle suit le drag. */
 function TimelineFrame({
   children,
+  footer,
   ref,
   ...props
-}: React.ComponentProps<"ol">) {
+}: React.ComponentProps<"ol"> & { footer?: React.ReactNode }) {
   return (
     <div className="relative">
       <span
@@ -163,6 +186,7 @@ function TimelineFrame({
       <ol ref={ref} className="relative flex flex-col" {...props}>
         {children}
       </ol>
+      {footer}
     </div>
   );
 }
