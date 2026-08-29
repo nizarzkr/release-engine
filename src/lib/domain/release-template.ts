@@ -14,6 +14,13 @@ export const MILESTONE_PHASE_LABELS: Record<MilestonePhase, string> = {
 };
 
 // Un jalon saisi par l'utilisateur.
+// Couleur de pastille par phase (partagée timeline / page release).
+export const MILESTONE_PHASE_COLORS: Record<MilestonePhase, string> = {
+  PRE: "#3E6DAE",
+  DAY: "#1E8A5F",
+  POST: "#C08A2E",
+};
+
 export const MilestoneSchema = z.object({
   key: z.string(),
   label: z

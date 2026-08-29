@@ -20,6 +20,7 @@ import {
 import {
   PIPELINE_STATUSES,
   PIPELINE_LABELS,
+  PIPELINE_COLORS,
   type PipelineStatus,
 } from "@/lib/domain/content";
 import {
@@ -28,6 +29,8 @@ import {
   type ChecklistPhase,
 } from "@/lib/domain/checklist";
 import { TimelineView } from "@/components/timeline-view";
+import { TimelineTemplateDialog } from "@/components/timeline-template-dialog";
+import type { MilestoneCard } from "@/components/milestone-dialog";
 import { SourceBlocksSection } from "@/components/source-blocks-section";
 import { ChecklistSection } from "@/components/checklist-section";
 import { toggleChecklistItem } from "./checklist-actions";
@@ -42,13 +45,6 @@ const PHASE_DOT: Record<MilestonePhase, string> = {
   PRE: "#3E6DAE",
   DAY: "#1E8A5F",
   POST: "#C08A2E",
-};
-
-const PIPELINE_DOT: Record<PipelineStatus, string> = {
-  BACKLOG: "#B0AB9F",
-  A_TOURNER: "#C08A2E",
-  A_MONTER: "#3E6DAE",
-  READY: "#1E8A5F",
 };
 
 function coverLetter(title: string) {
@@ -84,7 +80,7 @@ export default async function ReleaseDetailPage({
         .order("due_date", { ascending: true, nullsFirst: false }),
       supabase
         .from("content_item")
-        .select("pipeline_status")
+        .select("id, milestone_key, pipeline_status")
         .eq("release_id", id),
       supabase
         .from("source_block")
@@ -118,6 +114,15 @@ export default async function ReleaseDetailPage({
   const contents = contentRows ?? [];
   const contentCount = (status: PipelineStatus) =>
     contents.filter((c) => (c.pipeline_status ?? "BACKLOG") === status).length;
+
+  // Cartes déjà générées depuis un jalon → état affiché sur la timeline.
+  const milestoneCards: MilestoneCard[] = contents
+    .filter((c) => c.milestone_key)
+    .map((c) => ({
+      id: c.id,
+      milestone_key: c.milestone_key as string,
+      pipeline_status: (c.pipeline_status ?? "BACKLOG") as PipelineStatus,
+    }));
 
   // --- Timeline (aperçu) ---
   const milestones = coerceMilestones(release.milestones);
@@ -292,7 +297,7 @@ export default async function ReleaseDetailPage({
                 >
                   <span
                     className="h-2 w-2 rounded-[3px]"
-                    style={{ background: PIPELINE_DOT[status] }}
+                    style={{ background: PIPELINE_COLORS[status] }}
                   />
                   {PIPELINE_LABELS[status]}
                   <span className="ml-auto font-semibold">
@@ -413,10 +418,25 @@ export default async function ReleaseDetailPage({
           overview,
           timeline: (
             <Card>
-              <CardContent>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Clique un jalon pour l&apos;éditer, glisse-le pour le
+                    redater.
+                  </p>
+                  <div className="ml-auto">
+                    <TimelineTemplateDialog
+                      releaseId={id}
+                      count={milestones.length}
+                      defaultName={`${release.window_template ?? "Format"} (${release.title})`}
+                    />
+                  </div>
+                </div>
                 <TimelineView
                   milestones={milestones}
                   releaseDate={release.release_date}
+                  releaseId={id}
+                  cards={milestoneCards}
                 />
               </CardContent>
             </Card>

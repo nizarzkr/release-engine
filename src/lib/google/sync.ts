@@ -4,6 +4,7 @@ import { decryptSecret } from "@/lib/crypto";
 import { addDays, daysBetween } from "@/lib/domain/timeline";
 import { cardTitle } from "@/lib/domain/content";
 import { coerceMilestones } from "@/lib/domain/release-template";
+import { phaseForOffset } from "@/lib/domain/milestone";
 import { getConnectionRow } from "./connection";
 import { getAccessToken } from "./oauth";
 import {
@@ -296,13 +297,24 @@ async function applyDateChange(
   if (newOffset === target.offset) return false;
 
   const updated = milestones.map((m) =>
-    m.key === milestoneKey ? { ...m, offset: newOffset } : m,
+    m.key === milestoneKey
+      ? { ...m, offset: newOffset, phase: phaseForOffset(newOffset) }
+      : m,
   );
   const { error } = await supabase
     .from("release")
     .update({ milestones: updated })
     .eq("id", releaseId);
-  return !error;
+  if (error) return false;
+
+  // La carte générée par ce jalon suit son jalon, comme lors d'un drag
+  // dans la timeline de l'app.
+  await supabase
+    .from("content_item")
+    .update({ scheduled_date: date })
+    .eq("release_id", releaseId)
+    .eq("milestone_key", milestoneKey);
+  return true;
 }
 
 /** Construit l'ensemble des events attendus depuis la base. */

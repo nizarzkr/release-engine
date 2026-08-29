@@ -11,6 +11,7 @@ import { Check } from "lucide-react";
 import {
   PIPELINE_STATUSES,
   PIPELINE_LABELS,
+  PIPELINE_COLORS,
   type PipelineStatus,
 } from "@/lib/domain/content";
 import {
@@ -25,14 +26,6 @@ import { useActionState } from "react";
 import { useActionToast } from "@/lib/use-action-toast";
 
 type Columns = Record<PipelineStatus, BoardItem[]>;
-
-// Pastille de couleur par étape du pipeline.
-const STATUS_DOT: Record<PipelineStatus, string> = {
-  BACKLOG: "#B0AB9F",
-  A_TOURNER: "#C08A2E",
-  A_MONTER: "#3E6DAE",
-  READY: "#1E8A5F",
-};
 
 function group(items: BoardItem[]): Columns {
   const g: Columns = { BACKLOG: [], A_TOURNER: [], A_MONTER: [], READY: [] };
@@ -124,7 +117,7 @@ export function KanbanBoard({
                   <span className="flex items-center gap-2 text-sm font-medium">
                     <span
                       className="h-2 w-2 rounded-full"
-                      style={{ background: STATUS_DOT[status] }}
+                      style={{ background: PIPELINE_COLORS[status] }}
                     />
                     {PIPELINE_LABELS[status]}
                   </span>

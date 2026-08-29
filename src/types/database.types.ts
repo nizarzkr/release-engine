@@ -143,6 +143,7 @@ export type Database = {
           format: string | null
           id: string
           is_published: boolean | null
+          milestone_key: string | null
           objective_tag: string | null
           pipeline_status: string | null
           platform: string | null
@@ -161,6 +162,7 @@ export type Database = {
           format?: string | null
           id?: string
           is_published?: boolean | null
+          milestone_key?: string | null
           objective_tag?: string | null
           pipeline_status?: string | null
           platform?: string | null
@@ -179,6 +181,7 @@ export type Database = {
           format?: string | null
           id?: string
           is_published?: boolean | null
+          milestone_key?: string | null
           objective_tag?: string | null
           pipeline_status?: string | null
           platform?: string | null

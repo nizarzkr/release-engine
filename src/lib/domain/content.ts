@@ -16,6 +16,14 @@ export const PIPELINE_LABELS: Record<PipelineStatus, string> = {
   READY: "Ready",
 };
 
+// Couleur de pastille par étape (partagée kanban / timeline / page release).
+export const PIPELINE_COLORS: Record<PipelineStatus, string> = {
+  BACKLOG: "#B0AB9F",
+  A_TOURNER: "#C08A2E",
+  A_MONTER: "#3E6DAE",
+  READY: "#1E8A5F",
+};
+
 export const CONTENT_FORMATS = ["SHORT", "LONG"] as const;
 export type ContentFormat = (typeof CONTENT_FORMATS)[number];
 export const FORMAT_LABELS: Record<ContentFormat, string> = {
