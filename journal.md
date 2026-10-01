@@ -487,6 +487,37 @@ Changer la date de sortie déplaçait la timeline (jalons relatifs) mais pas la 
 
 ---
 
+## Export checklist / timeline + aperçu des cartes ✅ TESTÉ CÔTÉ USER
+**Date : 2026-10-01** · commit `85f1ca8`
+
+### Décisions
+- **3 points d'export par release** : onglet Checklist (PDF / CSV), onglet Timeline (PDF / CSV), menu « … » de la release pour le plan de sortie complet (PDF / Excel).
+- **Contenu exporté** : checklist, jalons, et contenus par ordre chronologique avec brief complet (accroche, concept, structure, son, CTA), **archivés compris**.
+- **PDF en téléchargement direct** (`@react-pdf/renderer`) plutôt qu'une page à imprimer : rendu identique partout, aux couleurs de l'app (crème `#f6f3ec`, vert `#1e8a5f`, Inter, en-tête « Release Engine. »).
+- **Document unique en Excel à onglets** (`exceljs`) plutôt que plusieurs CSV. Les exports partiels restent en CSV (`;` + BOM UTF-8 pour Excel FR).
+- **Aperçu des cartes** : fenêtre centrale en lecture seule, bouton « Éditer » qui bascule sur le formulaire. Composant de carte partagé → actif dans le Studio, le pipeline d'une release et la vue Liste.
+
+### Fait
+- **`domain/export.ts`** (pur) : modèle d'export unique (`buildReleaseExport`) + tableaux (checklist, jalons, contenus, timeline à plat) + `toCsv` + nom de fichier. Les trois rendus ne font que mettre en forme.
+- **`lib/export/pdf.tsx`** et **`lib/export/xlsx.ts`** (server-only).
+- **Route `GET /releases/[id]/export?scope=&format=`** : couples scope/format validés, RLS = on n'exporte que ses releases.
+- **`export-menu.tsx`** (bouton « Exporter ») + entrées d'export dans `release-actions-menu.tsx`.
+- **`content-dialog.tsx`** : mode `preview` + ouverture pilotable (`open` / `onOpenChange`, `triggerRender={null}`) ; `content-card.tsx` ouvre l'aperçu au clic.
+
+### Pièges rencontrés
+- La police Inter (sous-ensemble latin) n'a pas le glyphe ✓ → coche dessinée en SVG.
+- `lineHeight` dans react-pdf ajoutait une ligne vide après chaque champ du brief → retiré.
+- Les polices sont lues sur disque à l'exécution → `outputFileTracingIncludes` dans `next.config.ts` pour les embarquer sur Vercel (crochets de `[id]` échappés, le glob est du picomatch).
+- Les dialogues sont en portail mais leurs clics remontent l'arbre React jusqu'à la carte → `stopPropagation` autour des dialogues de la carte.
+
+### Vérifs passées
+- TS clean, lint sans nouvelle alerte. PDF / Excel / CSV générés sur données fictives et relus visuellement. Test user OK en local.
+
+### Reste
+- Vérifier un export PDF sur Vercel (police embarquée).
+
+---
+
 ## Prochaine étape : pousser polish + B2 (redeploy) ; puis éventuellement dark mode / landing / watch channels
 - Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
 - Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
