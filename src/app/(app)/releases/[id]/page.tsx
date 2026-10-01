@@ -423,25 +423,21 @@ export default async function ReleaseDetailPage({
           timeline: (
             <Card>
               <CardContent className="flex flex-col gap-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="text-xs text-muted-foreground">
-                    Clique un jalon pour l&apos;éditer, glisse-le pour le
-                    redater.
-                  </p>
-                  <div className="ml-auto flex items-center gap-2">
-                    <ExportMenu releaseId={id} scope="timeline" />
-                    <TimelineTemplateDialog
-                      releaseId={id}
-                      count={milestones.length}
-                      defaultName={`${release.window_template ?? "Format"} (${release.title})`}
-                    />
-                  </div>
-                </div>
                 <TimelineView
                   milestones={milestones}
                   releaseDate={release.release_date}
                   releaseId={id}
                   cards={milestoneCards}
+                  headerActions={
+                    <>
+                      <ExportMenu releaseId={id} scope="timeline" />
+                      <TimelineTemplateDialog
+                        releaseId={id}
+                        count={milestones.length}
+                        defaultName={`${release.window_template ?? "Format"} (${release.title})`}
+                      />
+                    </>
+                  }
                 />
               </CardContent>
             </Card>

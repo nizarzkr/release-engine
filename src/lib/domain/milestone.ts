@@ -105,6 +105,26 @@ export function reorderMilestones(
   return { milestones: rest, moved: updated };
 }
 
+/**
+ * Suppression groupée : retire les jalons `keys`, sauf l'ancre (le jour de
+ * sortie sert d'origine aux offsets, il ne part qu'avec la release).
+ * Renvoie la nouvelle liste et les clés réellement retirées.
+ */
+export function removeMilestones(
+  milestones: MilestoneDef[],
+  keys: string[],
+): { milestones: MilestoneDef[]; removed: string[] } {
+  const wanted = new Set(keys);
+  const removed = milestones
+    .filter((m) => wanted.has(m.key) && !isAnchor(m))
+    .map((m) => m.key);
+  const gone = new Set(removed);
+  return {
+    milestones: milestones.filter((m) => !gone.has(m.key)),
+    removed,
+  };
+}
+
 /** Remplace un jalon par sa version éditée, en gardant la liste triée. */
 export function replaceMilestone(
   milestones: MilestoneDef[],

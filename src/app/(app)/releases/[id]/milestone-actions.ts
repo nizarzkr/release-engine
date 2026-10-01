@@ -17,6 +17,7 @@ import {
   milestoneCardFields,
   offsetForDate,
   phaseForOffset,
+  removeMilestones,
   reorderMilestones,
   replaceMilestone,
   sortMilestones,
@@ -305,6 +306,39 @@ export async function deleteMilestone(
   await syncGoogleBestEffort();
   revalidateRelease(releaseId);
   return { ok: true };
+}
+
+/**
+ * Suppression groupée depuis la timeline (mode sélection). Contrairement à la
+ * suppression unitaire, les cartes liées RESTENT dans le board : elles sont
+ * seulement détachées de leur jalon. Le jour de sortie est ignoré.
+ */
+export async function deleteMilestones(
+  releaseId: string,
+  keys: string[],
+): Promise<MilestoneState & { deleted?: number }> {
+  await getUserOrRedirect();
+  const supabase = await createClient();
+  const release = await loadRelease(supabase, releaseId);
+  if (!release) return { error: "Release introuvable." };
+
+  const { milestones, removed } = removeMilestones(release.milestones, keys);
+  if (removed.length === 0) return { error: "Aucun jalon à supprimer." };
+
+  // Détacher d'abord : une carte ne doit jamais pointer un jalon fantôme.
+  const { error: cardError } = await supabase
+    .from("content_item")
+    .update({ milestone_key: null })
+    .eq("release_id", releaseId)
+    .in("milestone_key", removed);
+  if (cardError) return { error: cardError.message };
+
+  const { error } = await persistMilestones(supabase, releaseId, milestones);
+  if (error) return { error: error.message };
+
+  await syncGoogleBestEffort();
+  revalidateRelease(releaseId);
+  return { ok: true, deleted: removed.length };
 }
 
 /**
