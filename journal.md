@@ -462,6 +462,31 @@ V1 en ligne sur https://release-engine-navy.vercel.app. Choix user : **toasts** 
 
 ---
 
+## Checklist calée sur la date de sortie ✅ TESTÉ CÔTÉ USER
+**Date : 2026-10-01** · commit `7854f32`
+
+### Problème
+Changer la date de sortie déplaçait la timeline (jalons relatifs) mais pas la checklist : `due_date` était une date absolue figée à la création. Une release repoussée de ~7 mois avait sa checklist restée en sept. 2026.
+
+### Décisions
+- **Approche écartée** : décaler les tâches de l'écart entre ancienne et nouvelle date. Préserve les ajustements manuels, mais ne rattrape jamais une checklist déjà désalignée (le code ne voit que l'écart, pas la position attendue).
+- **Retenu** : chaque tâche porte son **écart à J-Day** (`due_offset`), comme les jalons. `due_date` reste stockée (calendrier, dashboard, synchro Google la lisent) mais n'est plus que `release_date + due_offset`.
+- Vaut aussi pour les **tâches créées à la main** : la date saisie fixe l'écart.
+- **Tâches cochées** : gardent leur date (historique) ; décochées, elles se recalent sur la sortie actuelle.
+- Périmètre : checklist uniquement. Cartes de contenu libres et dates de tournage ne bougent pas (choix user).
+
+### Fait
+- **Migration `0009_checklist_offset`** (appliquée à la main via SQL Editor) : colonne `due_offset` + backfill (J d'origine pour les 13 tâches par défaut, écart actuel pour les manuelles) + réalignement des tâches ouvertes. Types édités à la main.
+- **`domain/checklist.ts`** : `realignChecklist` (pur, idempotent) + `offsetForDueDate` ; `checklistRowsForRelease` renvoie `due_offset`.
+- **`updateRelease`** : réaligne la checklist dès que la date de sortie change (y compris avec changement de format).
+- **`checklist-actions.ts`** : ajout manuel → calcule l'écart ; décocher → recale la tâche.
+- **`sync.ts`** : déplacer une tâche dans Google Agenda met à jour son écart.
+
+### Vérifs passées
+- TS + lint clean, logique de recalage testée sur cas fictifs. Test user OK : checklist recalée après migration, puis suit un changement de date.
+
+---
+
 ## Prochaine étape : pousser polish + B2 (redeploy) ; puis éventuellement dark mode / landing / watch channels
 - Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
 - Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
