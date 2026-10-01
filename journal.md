@@ -518,6 +518,25 @@ Changer la date de sortie déplaçait la timeline (jalons relatifs) mais pas la 
 
 ---
 
+## Timeline : sélection multiple + suppression groupée de jalons ✅ TESTÉ CÔTÉ USER
+**Date : 2026-10-01** · commit `29295d7`
+
+### Décisions
+- Mode **« Sélectionner »** (bouton dans l'en-tête de l'onglet Timeline), même modèle que la sélection groupée du Studio : barre « Tout sélectionner / Supprimer / Quitter », confirmation inline.
+- **Cartes liées conservées** : la suppression groupée détache les cartes (`milestone_key = null`) au lieu de les supprimer. La suppression unitaire (depuis la fenêtre du jalon) supprime toujours sa carte — comportement inchangé.
+- Le **jour de sortie** n'est pas sélectionnable (ancre des offsets) ; « Tout sélectionner » l'exclut.
+- Case à cocher à **droite** de la ligne : à gauche, elle aurait masqué les pastilles posées sur le filet de la timeline.
+
+### Fait
+- **`domain/milestone.ts`** : `removeMilestones` (pur, ignore l'ancre).
+- **`milestone-actions.ts`** : `deleteMilestones` — détache les cartes puis retire les jalons, sync Google + revalidation.
+- **`timeline-view.tsx`** : état de sélection, barre d'actions, `SelectableRow` ; drag et ajout désactivés pendant la sélection. L'en-tête de l'onglet (aide + export + « Enregistrer comme format ») passe dans le composant via `headerActions`.
+
+### Vérifs passées
+- TS clean, lint sans nouvelle alerte, `removeMilestones` testé (tout sélectionné → seule « Sortie » reste). Test user OK en local.
+
+---
+
 ## Prochaine étape : pousser polish + B2 (redeploy) ; puis éventuellement dark mode / landing / watch channels
 - Gestion d'erreurs / états de chargement / responsive ; parcours complet de bout en bout.
 - Déploiement Vercel + variables d'env prod (⚠️ `maxDuration` génération IA vs plan Vercel).
