@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { CalendarDays, Clapperboard, Disc3, Check } from "lucide-react";
 import type { Tables } from "@/types/database.types";
 import type { AutoTag, AutoTagTone } from "@/lib/domain/content-tags";
@@ -37,16 +40,32 @@ export function ContentCard({
   onToggleSelect?: () => void;
 }) {
   const manualTags = item.tags ?? [];
+  // Clic sur la carte = aperçu du contenu (le bouton « Éditer » reste un
+  // raccourci direct vers le formulaire).
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
     <div
-      onClick={selectable ? onToggleSelect : undefined}
-      className={`rounded-xl border bg-card p-3 shadow-sm transition-shadow ${
+      onClick={selectable ? onToggleSelect : () => setPreviewOpen(true)}
+      className={`cursor-pointer rounded-xl border bg-card p-3 shadow-sm transition-shadow hover:shadow-md ${
         dragging ? "ring-2 ring-primary/40 shadow-md" : ""
-      } ${selectable ? "cursor-pointer" : ""} ${
-        selected ? "ring-2 ring-primary" : ""
-      }`}
+      } ${selected ? "ring-2 ring-primary" : ""}`}
     >
+      {!selectable && (
+        // Les dialogues sont rendus en portail, mais leurs clics remontent
+        // l'arbre React jusqu'à la carte : on les arrête ici.
+        <span onClick={(e) => e.stopPropagation()}>
+          <ContentDialog
+            item={item}
+            releaseId={item.release_id}
+            sourceBlocks={sourceBlocks}
+            triggerRender={null}
+            preview
+            open={previewOpen}
+            onOpenChange={setPreviewOpen}
+          />
+        </span>
+      )}
       {item.releaseTitle && (
         <div className="mb-1.5 inline-flex max-w-full items-center gap-1 truncate rounded-md bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground ring-1 ring-border">
           <Disc3 className="h-3 w-3 shrink-0" />
@@ -66,11 +85,13 @@ export function ContentCard({
             <Check className="h-3 w-3" strokeWidth={3} />
           </span>
         ) : (
-          <ContentDialog
-            item={item}
-            releaseId={item.release_id}
-            sourceBlocks={sourceBlocks}
-          />
+          <span onClick={(e) => e.stopPropagation()}>
+            <ContentDialog
+              item={item}
+              releaseId={item.release_id}
+              sourceBlocks={sourceBlocks}
+            />
+          </span>
         )}
       </div>
 

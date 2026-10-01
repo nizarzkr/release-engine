@@ -11,6 +11,7 @@ import {
   deleteChecklistItem,
 } from "@/app/(app)/releases/[id]/checklist-actions";
 import { Check, X } from "lucide-react";
+import { ExportMenu } from "@/components/export-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -43,9 +44,12 @@ export async function ChecklistSection({
           </p>
         </div>
         {all.length > 0 && (
-          <span className="text-sm text-muted-foreground">
-            {doneCount}/{all.length} fait{doneCount > 1 ? "s" : ""}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              {doneCount}/{all.length} fait{doneCount > 1 ? "s" : ""}
+            </span>
+            <ExportMenu releaseId={releaseId} scope="checklist" />
+          </div>
         )}
       </div>
 

@@ -3,13 +3,21 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { FORMATS_BY_SCOPE } from "@/lib/domain/export";
+import {
+  EXPORT_FORMAT_LABELS,
+  ExportFormatIcon,
+  exportHref,
+} from "@/components/export-menu";
 
-// Menu « ⋯ » de la page détail : Modifier / Supprimer.
+// Menu « ⋯ » de la page détail : Modifier / Exporter / Supprimer.
 // `deleteAction` est une server action déjà liée à l'id de la release.
 export function ReleaseActionsMenu({
+  releaseId,
   editHref,
   deleteAction,
 }: {
+  releaseId: string;
   editHref: string;
   deleteAction: () => Promise<void>;
 }) {
@@ -49,6 +57,19 @@ export function ReleaseActionsMenu({
             <Pencil className="h-4 w-4 text-muted-foreground" />
             Modifier la release
           </Link>
+          <div className="my-1 h-px bg-border" />
+          {/* Plan de sortie complet : checklist + jalons + contenus. */}
+          {FORMATS_BY_SCOPE.all.map((format) => (
+            <a
+              key={format}
+              href={exportHref(releaseId, "all", format)}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-foreground/80 transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <ExportFormatIcon format={format} />
+              Exporter en {EXPORT_FORMAT_LABELS[format]}
+            </a>
+          ))}
           <div className="my-1 h-px bg-border" />
           <form action={deleteAction}>
             <button

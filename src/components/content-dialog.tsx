@@ -26,8 +26,15 @@ import {
   OBJECTIVE_LABELS,
   PIPELINE_STATUSES,
   PIPELINE_LABELS,
+  PIPELINE_COLORS,
+  cardTitle,
   type Brief,
+  type ContentFormat,
+  type ObjectiveTag,
+  type PipelineStatus,
 } from "@/lib/domain/content";
+import { formatDateFr } from "@/lib/format";
+import { Clapperboard, Disc3, Pencil } from "lucide-react";
 import { listToString } from "@/lib/domain/profile";
 import type { Tables } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
@@ -53,43 +60,188 @@ export function ContentDialog({
   sourceBlocks,
   triggerRender,
   triggerChildren,
+  preview = false,
+  open: controlledOpen,
+  onOpenChange,
 }: {
-  item: Tables<"content_item">;
+  item: Tables<"content_item"> & { releaseTitle?: string | null };
   releaseId: string;
   sourceBlocks: SourceOption[];
   // Déclencheur personnalisable : par défaut un bouton « Éditer » (kanban),
-  // ou une ligne entière (vue Liste).
-  triggerRender?: ReactElement;
+  // ou une ligne entière (vue Liste). `null` = pas de déclencheur (ouverture
+  // pilotée par `open` / `onOpenChange`).
+  triggerRender?: ReactElement | null;
   triggerChildren?: ReactNode;
+  // Ouvre d'abord l'aperçu en lecture seule, avec un bouton « Éditer ».
+  preview?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = controlledOpen ?? localOpen;
   const [openCount, setOpenCount] = useState(0);
-  const close = useCallback(() => setOpen(false), []);
+  const [editing, setEditing] = useState(!preview);
+  const close = useCallback(() => {
+    setLocalOpen(false);
+    onOpenChange?.(false);
+  }, [onOpenChange]);
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        setOpen(next);
-        if (next) setOpenCount((c) => c + 1);
+        setLocalOpen(next);
+        onOpenChange?.(next);
+        if (next) {
+          setOpenCount((c) => c + 1);
+          setEditing(!preview);
+        }
       }}
     >
-      <DialogTrigger render={triggerRender ?? <Button variant="ghost" size="xs" />}>
-        {triggerChildren ?? "Éditer"}
-      </DialogTrigger>
+      {triggerRender !== null && (
+        <DialogTrigger
+          render={triggerRender ?? <Button variant="ghost" size="xs" />}
+        >
+          {triggerChildren ?? "Éditer"}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Contenu</DialogTitle>
+          <DialogTitle>{editing ? "Contenu" : cardTitle(item)}</DialogTitle>
         </DialogHeader>
-        <EditForm
-          key={openCount}
-          item={item}
-          releaseId={releaseId}
-          sourceBlocks={sourceBlocks}
-          onSuccess={close}
-        />
+        {editing ? (
+          <EditForm
+            key={openCount}
+            item={item}
+            releaseId={releaseId}
+            sourceBlocks={sourceBlocks}
+            onSuccess={close}
+          />
+        ) : (
+          <ContentPreview
+            item={item}
+            sourceBlocks={sourceBlocks}
+            onClose={close}
+            onEdit={() => setEditing(true)}
+          />
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Aperçu en lecture seule d'une carte : tout le brief, sans formulaire. */
+function ContentPreview({
+  item,
+  sourceBlocks,
+  onClose,
+  onEdit,
+}: {
+  item: Tables<"content_item"> & { releaseTitle?: string | null };
+  sourceBlocks: SourceOption[];
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  const brief = (item.brief ?? {}) as Partial<Brief>;
+  const status = (item.pipeline_status ?? "BACKLOG") as PipelineStatus;
+  const source = sourceBlocks.find((b) => b.id === item.source_block_id);
+  const meta = [
+    item.scheduled_date ? formatDateFr(item.scheduled_date) : "Non daté",
+    item.platform,
+    item.format ? FORMAT_LABELS[item.format as ContentFormat] : null,
+    item.objective_tag
+      ? OBJECTIVE_LABELS[item.objective_tag as ObjectiveTag]
+      : null,
+  ].filter(Boolean);
+  const fields: [string, string | undefined][] = [
+    ["Accroche", brief.hook],
+    ["Concept", brief.concept],
+    ["Structure", brief.structure],
+    ["Son suggéré", brief.sound_suggestion],
+    ["CTA", brief.cta],
+  ];
+  const filled = fields.filter(([, v]) => v?.trim());
+
+  return (
+    <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2 py-0.5 font-medium text-foreground/80 ring-1 ring-border"
+        >
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: PIPELINE_COLORS[status] }}
+          />
+          {PIPELINE_LABELS[status]}
+        </span>
+        {item.is_published && (
+          <span className="rounded-full bg-muted px-2 py-0.5">Archivé</span>
+        )}
+        <span>{item.theme}</span>
+        {meta.map((m) => (
+          <span key={m}>· {m}</span>
+        ))}
+      </div>
+
+      {(item.releaseTitle || source) && (
+        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+          {item.releaseTitle && (
+            <span className="inline-flex items-center gap-1.5">
+              <Disc3 className="h-3.5 w-3.5" />
+              {item.releaseTitle}
+            </span>
+          )}
+          {source && (
+            <span className="inline-flex items-center gap-1.5">
+              <Clapperboard className="h-3.5 w-3.5" />
+              {source.label}
+            </span>
+          )}
+        </div>
+      )}
+
+      {filled.length === 0 ? (
+        <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+          Pas encore de brief pour ce contenu.
+        </p>
+      ) : (
+        <dl className="flex flex-col gap-3">
+          {filled.map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+                {label}
+              </dt>
+              <dd className="mt-0.5 whitespace-pre-line text-sm leading-relaxed">
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {(item.tags ?? []).length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {(item.tags ?? []).map((t) => (
+            <span
+              key={t}
+              className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 border-t pt-3">
+        <Button type="button" variant="outline" onClick={onClose}>
+          Fermer
+        </Button>
+        <Button type="button" onClick={onEdit}>
+          <Pencil className="h-4 w-4" />
+          Éditer
+        </Button>
+      </div>
+    </div>
   );
 }
 

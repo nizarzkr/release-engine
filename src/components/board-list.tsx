@@ -118,6 +118,7 @@ export function BoardList({
               item={it}
               releaseId={it.release_id}
               sourceBlocks={sourceBlocks}
+              preview
               triggerRender={
                 <div
                   className={cn(

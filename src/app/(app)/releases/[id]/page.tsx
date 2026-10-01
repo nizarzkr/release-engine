@@ -34,6 +34,7 @@ import { TimelineTemplateDialog } from "@/components/timeline-template-dialog";
 import type { MilestoneCard } from "@/components/milestone-dialog";
 import { SourceBlocksSection } from "@/components/source-blocks-section";
 import { ChecklistSection } from "@/components/checklist-section";
+import { ExportMenu } from "@/components/export-menu";
 import { toggleChecklistItem } from "./checklist-actions";
 import { deleteRelease } from "../actions";
 import { ReleaseTabs, TabLink } from "./release-tabs";
@@ -364,6 +365,7 @@ export default async function ReleaseDetailPage({
                 Ouvrir le pipeline
               </Link>
               <ReleaseActionsMenu
+                releaseId={id}
                 editHref={`/releases/${id}/edit`}
                 deleteAction={deleteRelease.bind(null, id)}
               />
@@ -426,7 +428,8 @@ export default async function ReleaseDetailPage({
                     Clique un jalon pour l&apos;éditer, glisse-le pour le
                     redater.
                   </p>
-                  <div className="ml-auto">
+                  <div className="ml-auto flex items-center gap-2">
+                    <ExportMenu releaseId={id} scope="timeline" />
                     <TimelineTemplateDialog
                       releaseId={id}
                       count={milestones.length}
