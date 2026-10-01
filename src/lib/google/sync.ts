@@ -270,9 +270,19 @@ async function applyDateChange(
     return !error;
   }
   if (kind === "CHECKLIST") {
+    // Déplacer la tâche dans Google, c'est changer son écart à la sortie.
+    const { data: task } = await supabase
+      .from("checklist_item")
+      .select("release:release_id(release_date)")
+      .eq("id", sourceId)
+      .maybeSingle();
+    if (!task?.release) return false;
     const { error } = await supabase
       .from("checklist_item")
-      .update({ due_date: date })
+      .update({
+        due_date: date,
+        due_offset: daysBetween(task.release.release_date, date),
+      })
       .eq("id", sourceId);
     return !error;
   }

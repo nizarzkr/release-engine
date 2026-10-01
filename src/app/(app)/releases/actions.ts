@@ -11,6 +11,7 @@ import {
   parseOptionalText,
 } from "@/lib/domain/release";
 import { coerceMilestones } from "@/lib/domain/release-template";
+import { realignChecklist } from "@/lib/domain/checklist";
 import { addDays, type MilestoneDef } from "@/lib/domain/timeline";
 import { syncGoogleBestEffort } from "@/lib/google/sync";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -144,6 +145,9 @@ export async function updateRelease(
     } else if (current.release_date !== parsed.data.release_date) {
       await redateMilestoneCards(supabase, id, parsed.data);
     }
+    if (current.release_date !== parsed.data.release_date) {
+      await realignReleaseChecklist(supabase, id, parsed.data.release_date);
+    }
   }
 
   await syncGoogleBestEffort();
@@ -181,6 +185,31 @@ async function redateMilestoneCards(
         .update({ scheduled_date: addDays(release.release_date, offset) })
         .eq("id", card.id);
     }),
+  );
+}
+
+/**
+ * Les tâches de checklist sont relatives à la sortie (`due_offset`) : on
+ * réécrit leur date absolue pour qu'elle suive la nouvelle date de sortie.
+ */
+async function realignReleaseChecklist(
+  supabase: SupabaseClient<Database>,
+  releaseId: string,
+  releaseDate: string,
+) {
+  const { data: tasks } = await supabase
+    .from("checklist_item")
+    .select("id, due_offset, due_date, is_done")
+    .eq("release_id", releaseId);
+  if (!tasks?.length) return;
+
+  await Promise.all(
+    realignChecklist(tasks, releaseDate).map((t) =>
+      supabase
+        .from("checklist_item")
+        .update({ due_date: t.due_date })
+        .eq("id", t.id),
+    ),
   );
 }
 

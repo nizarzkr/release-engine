@@ -1,4 +1,4 @@
-import { addDays } from "./timeline";
+import { addDays, daysBetween } from "./timeline";
 
 export const CHECKLIST_PHASES = ["PRE", "POST"] as const;
 export type ChecklistPhase = (typeof CHECKLIST_PHASES)[number];
@@ -34,6 +34,7 @@ export const DEFAULT_CHECKLIST: ChecklistTemplateItem[] = [
 export type ChecklistRow = {
   label: string;
   phase: ChecklistPhase;
+  due_offset: number;
   due_date: string;
 };
 
@@ -45,6 +46,41 @@ export function checklistRowsForRelease(releaseDate: string): ChecklistRow[] {
   return DEFAULT_CHECKLIST.map((t) => ({
     label: t.label,
     phase: t.phase,
+    due_offset: t.offset,
     due_date: addDays(releaseDate, t.offset),
   }));
+}
+
+/**
+ * Une tâche se cale sur la sortie : sa vraie donnée est `due_offset` (jours
+ * relatifs à J-Day), `due_date` n'en est que la traduction. Saisir une date
+ * revient donc à fixer un écart.
+ */
+export function offsetForDueDate(releaseDate: string, dueDate: string): number {
+  return daysBetween(releaseDate, dueDate);
+}
+
+type PlannedTask = {
+  id: string;
+  due_offset: number | null;
+  due_date: string | null;
+  is_done: boolean | null;
+};
+
+/**
+ * Tâches ouvertes dont la date ne correspond plus à `releaseDate + offset`
+ * (sortie déplacée, tâche décochée…) → nouvelle date à écrire. Idempotent :
+ * une checklist déjà calée renvoie []. Les tâches cochées gardent leur date
+ * (historique) et les tâches sans date restent sans date.
+ * Fonction PURE — renvoie uniquement les tâches à mettre à jour.
+ */
+export function realignChecklist(
+  tasks: PlannedTask[],
+  releaseDate: string,
+): { id: string; due_date: string }[] {
+  return tasks.flatMap((t) => {
+    if (t.is_done || t.due_offset === null) return [];
+    const due_date = addDays(releaseDate, t.due_offset);
+    return due_date === t.due_date ? [] : [{ id: t.id, due_date }];
+  });
 }

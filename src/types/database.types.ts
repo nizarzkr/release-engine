@@ -95,6 +95,7 @@ export type Database = {
         Row: {
           created_at: string | null
           due_date: string | null
+          due_offset: number | null
           id: string
           is_done: boolean | null
           label: string
@@ -106,6 +107,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           due_date?: string | null
+          due_offset?: number | null
           id?: string
           is_done?: boolean | null
           label: string
@@ -117,6 +119,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           due_date?: string | null
+          due_offset?: number | null
           id?: string
           is_done?: boolean | null
           label?: string
